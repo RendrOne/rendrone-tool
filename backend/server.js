@@ -9,9 +9,6 @@ const app = express();
 const RENDER_LIMIT = 15;
 
 // ── PERSISTENT STORE ──────────────────────────────────────────
-// Saves render counts to a JSON file.
-// On Railway: add a Volume mounted at /data and set DATA_DIR=/data
-// so counts survive redeploys. Without a volume they reset on restart.
 const DATA_DIR  = process.env.DATA_DIR || __dirname;
 const DATA_FILE = path.join(DATA_DIR, 'renders.json');
 
@@ -24,7 +21,7 @@ function saveStore(store) {
   catch(e) { console.error('[store] write failed:', e.message); }
 }
 
-let store = loadStore(); // { [projectId]: { used: N, reserved: N } }
+let store = loadStore();
 
 function getProject(pid) {
   if (!store[pid]) store[pid] = { used: 0, reserved: 0 };
@@ -34,7 +31,6 @@ function calcRemaining(rec) {
   return Math.max(0, RENDER_LIMIT - (rec.used + rec.reserved));
 }
 
-// Atomic-style reserve (single-process safe with sync file write)
 function tryReserve(pid) {
   const rec = getProject(pid);
   if (calcRemaining(rec) <= 0) return null;
@@ -86,7 +82,7 @@ app.get('/renders/status', (req, res) => {
 });
 
 // ── POST /ai-enhance ──────────────────────────────────────────
-const ENHANCE_PROMPT = `Upscale this image to ultra high resolution (4K\u20138K+) while preserving the exact same composition, layout, proportions, geometry, and camera angle.
+const ENHANCE_PROMPT = `Upscale this image to ultra high resolution (4K–8K+) while preserving the exact same composition, layout, proportions, geometry, and camera angle.
 
 Do NOT add, remove, move, or redesign anything in the scene. The structure, architecture, landscaping, and all elements must remain 100% identical.
 
@@ -121,7 +117,6 @@ app.post('/ai-enhance', async (req, res) => {
   if (!image)     return res.status(400).json({ error: '"image" field required' });
   if (!projectId) return res.status(400).json({ error: '"projectId" field required' });
 
-  // Reserve credit before calling AI
   const remaining = tryReserve(projectId);
   if (remaining === null) {
     return res.status(429).json({ error: 'Render limit reached for this project', remaining: 0 });
@@ -130,7 +125,7 @@ app.post('/ai-enhance', async (req, res) => {
   try {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({
-      model: process.env.IMAGE_MODEL || 'gemini-2.0-flash-preview-image-generation',
+      model: process.env.IMAGE_MODEL || 'gemini-2.0-flash-exp',
       generationConfig: { responseModalities: ['image', 'text'] }
     });
 
