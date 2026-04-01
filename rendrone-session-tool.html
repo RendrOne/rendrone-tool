@@ -268,6 +268,19 @@
   .air-limit-reached { padding:.65rem 1.25rem; background:rgba(220,50,50,.08); border-bottom:1px solid rgba(220,50,50,.15); font-size:.72rem; color:#e05555; font-family:'DM Sans',sans-serif; flex-shrink:0; display:none; }
   .air-limit-reached.show { display:block; }
 
+  /* ── AI RENDER LIGHTBOX ─────────────────────────────────── */
+  .air-lb { position:fixed; inset:0; background:rgba(0,0,0,.93); z-index:9000; display:none; align-items:center; justify-content:center; backdrop-filter:blur(10px); }
+  .air-lb.open { display:flex; }
+  .air-lb-box { display:flex; flex-direction:column; max-width:92vw; max-height:92vh; background:#0d0d0d; border:1px solid rgba(255,255,255,.08); border-radius:12px; overflow:hidden; box-shadow:0 40px 100px rgba(0,0,0,.9); }
+  .air-lb-hdr { display:flex; align-items:center; justify-content:space-between; padding:.7rem 1rem; border-bottom:1px solid rgba(255,255,255,.06); flex-shrink:0; gap:1rem; }
+  .air-lb-title { font-family:'Poppins',sans-serif; font-size:.62rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:#444; }
+  .air-lb-btns { display:flex; align-items:center; gap:.5rem; }
+  .air-lb-dl { height:28px; padding:0 .85rem; background:#fff; color:#000; border:none; border-radius:6px; font-family:'DM Sans',sans-serif; font-size:.68rem; font-weight:600; cursor:pointer; transition:background .15s; }
+  .air-lb-dl:hover { background:#e0e0e0; }
+  .air-lb-close { width:28px; height:28px; background:rgba(255,255,255,.06); border:none; border-radius:6px; color:#666; font-size:.85rem; cursor:pointer; transition:all .15s; display:flex; align-items:center; justify-content:center; }
+  .air-lb-close:hover { background:rgba(255,255,255,.12); color:#fff; }
+  .air-lb-img { max-width:88vw; max-height:82vh; object-fit:contain; display:block; }
+
   /* ── MOBILE ─────────────────────────────────────── */
   @media (max-width: 768px) {
     html, body { height: 100dvh; }
@@ -543,6 +556,20 @@
   <div id="air-queue-view" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
     <div class="air-queue-hdr">Render Queue</div>
     <div class="air-q-grid" id="air-q-grid"></div>
+  </div>
+</div>
+
+<!-- AI Render Lightbox -->
+<div class="air-lb" id="air-lb" onclick="handleAirLbBg(event)">
+  <div class="air-lb-box">
+    <div class="air-lb-hdr">
+      <span class="air-lb-title" id="air-lb-title">AI Render</span>
+      <div class="air-lb-btns">
+        <button class="air-lb-dl" id="air-lb-dl-btn">Download</button>
+        <button class="air-lb-close" onclick="closeAirLb()">&#x2715;</button>
+      </div>
+    </div>
+    <img class="air-lb-img" id="air-lb-img" src="" alt="AI Render">
   </div>
 </div>
 
@@ -1330,15 +1357,12 @@ async function renderQueueItem(item) {
 function buildQueueCardActions(item, i) {
   const el = document.getElementById(`airact-${i}`);
   const s = shots[item.shotIdx];
+  const filename = `RendrOne-AIRender-${String(s.index).padStart(2,'0')}.jpg`;
 
-  const prev = document.createElement('button');
-  prev.className = 'air-act-btn';
-  prev.textContent = 'Preview';
-  prev.onclick = () => {
-    document.getElementById('prev-img').src = item.enhancedDataURL;
-    document.getElementById('prev-title').textContent = `AI Render — Screenshot #${String(s.index).padStart(2,'00')}`;
-    document.getElementById('prev-bg').classList.add('open');
-  };
+  const view = document.createElement('button');
+  view.className = 'air-act-btn';
+  view.textContent = 'View';
+  view.onclick = () => openAirLb(item.enhancedDataURL, `AI Render — #${String(s.index).padStart(2,'0')}`, filename);
 
   const dl = document.createElement('button');
   dl.className = 'air-act-btn';
@@ -1346,28 +1370,32 @@ function buildQueueCardActions(item, i) {
   dl.onclick = () => {
     const a = document.createElement('a');
     a.href = item.enhancedDataURL;
-    a.download = `RendrOne-AIRender-${String(s.index).padStart(2,'0')}.jpg`;
+    a.download = filename;
     a.click();
   };
 
-  const save = document.createElement('button');
-  save.className = 'air-act-btn';
-  save.textContent = 'Save';
-  save.onclick = () => {
-    const timeStr = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-    shotIdx++;
-    shots.push({ dataURL: item.enhancedDataURL, time: timeStr, index: shotIdx, aiRendered: true });
-    addCard(item.enhancedDataURL, timeStr, shotIdx);
-    updateCounts();
-    save.textContent = 'Saved ✓';
-    save.className = 'air-act-btn saved';
-    save.onclick = null;
-    toast('ok', 'AI render saved to library');
-  };
-
-  el.appendChild(prev);
+  el.appendChild(view);
   el.appendChild(dl);
-  el.appendChild(save);
+}
+
+function openAirLb(dataURL, title, filename) {
+  document.getElementById('air-lb-img').src = dataURL;
+  document.getElementById('air-lb-title').textContent = title;
+  document.getElementById('air-lb-dl-btn').onclick = () => {
+    const a = document.createElement('a');
+    a.href = dataURL;
+    a.download = filename;
+    a.click();
+  };
+  document.getElementById('air-lb').classList.add('open');
+}
+
+function closeAirLb() {
+  document.getElementById('air-lb').classList.remove('open');
+}
+
+function handleAirLbBg(e) {
+  if (e.target === document.getElementById('air-lb')) closeAirLb();
 }
 
 // AUTO-LOAD FROM ?project= OR ?embed= URL PARAM
