@@ -5,7 +5,7 @@
     "buildCommand": "cd backend && npm install --production"
   },
   "deploy": {
-    "startCommand": "cd backend && node server.js",
+    "startCommand": "node backend/server.js",
     "healthcheckPath": "/health",
     "healthcheckTimeout": 30,
     "restartPolicyType": "ON_FAILURE",
