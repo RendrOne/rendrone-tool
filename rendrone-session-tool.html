@@ -328,6 +328,13 @@
               <span class="dl-opt-desc">Individual image files</span>
             </div>
           </button>
+          <button class="dl-opt" onclick="handleDownload('ai')">
+            <div class="dl-opt-icon" style="background:linear-gradient(135deg,#1a1a2e,#16213e);color:#7c83fd;font-size:.6rem;font-family:'Poppins',sans-serif;font-weight:700;letter-spacing:.04em;">AI</div>
+            <div class="dl-opt-info">
+              <span class="dl-opt-name">AI Render</span>
+              <span class="dl-opt-desc">Enhance with Gemini AI</span>
+            </div>
+          </button>
         </div>
       </div>
 
@@ -681,12 +688,60 @@ document.addEventListener('click', function(e) {
   }
 });
 
+// ── AI RENDER ─────────────────────────────────────────────────
+// Set this to your deployed Railway backend URL once it's live.
+// Leave empty and the button will show a "coming soon" message.
+const AI_BACKEND_URL = '';
+
 function handleDownload(type) {
   closeDlDropdown();
-  if(type === 'pdf') {
-    makePDF();
-  } else if(type === 'images') {
-    downloadImages();
+  if(type === 'pdf') makePDF();
+  else if(type === 'images') downloadImages();
+  else if(type === 'ai') handleAiEnhance();
+}
+
+async function handleAiEnhance() {
+  if (!AI_BACKEND_URL) {
+    toast('i', 'AI Render backend not connected yet — coming soon!');
+    return;
+  }
+  if (!shots.length) return;
+
+  const bg = document.getElementById('pdf-bg');
+  const sub = document.getElementById('pdf-sub');
+  bg.classList.add('open');
+
+  try {
+    for (let i = 0; i < shots.length; i++) {
+      sub.textContent = `AI Enhancing ${i + 1} of ${shots.length}...`;
+      await tick();
+
+      const base64 = shots[i].dataURL.split(',')[1];
+      const mimeType = shots[i].dataURL.startsWith('data:image/png') ? 'image/png' : 'image/jpeg';
+
+      const resp = await fetch(`${AI_BACKEND_URL}/ai-enhance`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: base64, mimeType })
+      });
+
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        throw new Error(err.error || `Server error ${resp.status}`);
+      }
+
+      const { enhanced, mimeType: outMime } = await resp.json();
+      shots[i].dataURL = `data:${outMime || 'image/jpeg'};base64,${enhanced}`;
+    }
+
+    rebuildLib();
+    bg.classList.remove('open');
+    toast('ok', `${shots.length} image${shots.length > 1 ? 's' : ''} AI enhanced!`);
+
+  } catch (err) {
+    bg.classList.remove('open');
+    toast('!', `AI Render failed: ${err.message}`);
+    console.error('[AI Render]', err);
   }
 }
 
@@ -743,7 +798,9 @@ function injectContent(raw,label,knownSrc){
 }
 
 // CAPTURE
-const isMobileDevice = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+// Block only devices where getDisplayMedia genuinely doesn't exist (iOS).
+// Android Chrome has getDisplayMedia so it gets the full desktop flow.
+const isMobileDevice = !navigator.mediaDevices?.getDisplayMedia;
 
 function captureNow(){
   if(isMobileDevice){ openBrowserModal(); return; }
