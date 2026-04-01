@@ -2,44 +2,57 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const Database = require('better-sqlite3');
+const fs = require('fs');
 const path = require('path');
 
 const app = express();
 const RENDER_LIMIT = 15;
-const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'renders.db');
 
-// ── DATABASE ──────────────────────────────────────────────────
-const db = new Database(DB_PATH);
-db.exec(`
-  CREATE TABLE IF NOT EXISTS render_counts (
-    project_id  TEXT PRIMARY KEY,
-    used        INTEGER DEFAULT 0,
-    reserved    INTEGER DEFAULT 0,
-    created_at  TEXT    DEFAULT (datetime('now'))
-  )
-`);
+// ── PERSISTENT STORE ──────────────────────────────────────────
+// Saves render counts to a JSON file.
+// On Railway: add a Volume mounted at /data and set DATA_DIR=/data
+// so counts survive redeploys. Without a volume they reset on restart.
+const DATA_DIR  = process.env.DATA_DIR || __dirname;
+const DATA_FILE = path.join(DATA_DIR, 'renders.json');
 
-function getOrCreate(projectId) {
-  let row = db.prepare('SELECT * FROM render_counts WHERE project_id = ?').get(projectId);
-  if (!row) {
-    db.prepare('INSERT OR IGNORE INTO render_counts (project_id) VALUES (?)').run(projectId);
-    row = db.prepare('SELECT * FROM render_counts WHERE project_id = ?').get(projectId);
-  }
-  return row;
+function loadStore() {
+  try { return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8')); }
+  catch(e) { return {}; }
+}
+function saveStore(store) {
+  try { fs.writeFileSync(DATA_FILE, JSON.stringify(store), 'utf8'); }
+  catch(e) { console.error('[store] write failed:', e.message); }
 }
 
-function calcRemaining(row) {
-  return Math.max(0, RENDER_LIMIT - (row.used + row.reserved));
+let store = loadStore(); // { [projectId]: { used: N, reserved: N } }
+
+function getProject(pid) {
+  if (!store[pid]) store[pid] = { used: 0, reserved: 0 };
+  return store[pid];
+}
+function calcRemaining(rec) {
+  return Math.max(0, RENDER_LIMIT - (rec.used + rec.reserved));
 }
 
-// Atomically reserve one credit; returns remaining after reservation or null if none left
-const tryReserve = db.transaction((projectId) => {
-  const row = getOrCreate(projectId);
-  if (calcRemaining(row) <= 0) return null;
-  db.prepare('UPDATE render_counts SET reserved = reserved + 1 WHERE project_id = ?').run(projectId);
-  return calcRemaining(db.prepare('SELECT * FROM render_counts WHERE project_id = ?').get(projectId));
-});
+// Atomic-style reserve (single-process safe with sync file write)
+function tryReserve(pid) {
+  const rec = getProject(pid);
+  if (calcRemaining(rec) <= 0) return null;
+  rec.reserved += 1;
+  saveStore(store);
+  return calcRemaining(rec);
+}
+function commitRender(pid) {
+  const rec = getProject(pid);
+  rec.used     = (rec.used || 0) + 1;
+  rec.reserved = Math.max(0, (rec.reserved || 0) - 1);
+  saveStore(store);
+}
+function returnReserved(pid) {
+  const rec = getProject(pid);
+  rec.reserved = Math.max(0, (rec.reserved || 0) - 1);
+  saveStore(store);
+}
 
 // ── CORS ──────────────────────────────────────────────────────
 const allowed = (process.env.ALLOWED_ORIGINS || 'https://rendrone.github.io')
@@ -62,13 +75,13 @@ app.get('/health', (req, res) => {
 app.get('/renders/status', (req, res) => {
   const { project } = req.query;
   if (!project) return res.status(400).json({ error: 'project param required' });
-  const row = getOrCreate(project);
+  const rec = getProject(project);
   res.json({
     project,
-    remaining: calcRemaining(row),
-    used: row.used,
-    reserved: row.reserved,
-    total: RENDER_LIMIT
+    remaining: calcRemaining(rec),
+    used:      rec.used,
+    reserved:  rec.reserved,
+    total:     RENDER_LIMIT
   });
 });
 
@@ -108,13 +121,10 @@ app.post('/ai-enhance', async (req, res) => {
   if (!image)     return res.status(400).json({ error: '"image" field required' });
   if (!projectId) return res.status(400).json({ error: '"projectId" field required' });
 
-  // Atomically reserve a render credit before touching the AI
+  // Reserve credit before calling AI
   const remaining = tryReserve(projectId);
   if (remaining === null) {
-    return res.status(429).json({
-      error: 'Render limit reached for this project',
-      remaining: 0
-    });
+    return res.status(429).json({ error: 'Render limit reached for this project', remaining: 0 });
   }
 
   try {
@@ -135,21 +145,17 @@ app.post('/ai-enhance', async (req, res) => {
     const imgPart = candidates[0].content.parts.find(p => p.inlineData?.data);
     if (!imgPart) throw new Error('AI model did not return an image');
 
-    // Mark credit as used (move from reserved → used)
-    db.prepare('UPDATE render_counts SET used = used + 1, reserved = MAX(0, reserved - 1) WHERE project_id = ?')
-      .run(projectId);
+    commitRender(projectId);
+    const rec = getProject(projectId);
 
-    const row = db.prepare('SELECT * FROM render_counts WHERE project_id = ?').get(projectId);
     res.json({
-      enhanced: imgPart.inlineData.data,
+      enhanced:  imgPart.inlineData.data,
       mimeType:  imgPart.inlineData.mimeType || 'image/jpeg',
-      remaining: calcRemaining(row)
+      remaining: calcRemaining(rec)
     });
 
   } catch (err) {
-    // Return the reserved credit on failure so it's not wasted
-    db.prepare('UPDATE render_counts SET reserved = MAX(0, reserved - 1) WHERE project_id = ?')
-      .run(projectId);
+    returnReserved(projectId);
     console.error('[ai-enhance]', err.message);
     res.status(500).json({ error: err.message || 'Enhancement failed' });
   }
