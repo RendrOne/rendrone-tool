@@ -86,7 +86,7 @@ app.get('/renders/status', (req, res) => {
 });
 
 // ── POST /ai-enhance ──────────────────────────────────────────
-const ENHANCE_PROMPT = `Upscale this image to ultra high resolution (4K–8K+) while preserving the exact same composition, layout, proportions, geometry, and camera angle.
+const ENHANCE_PROMPT = `Upscale this image to ultra high resolution (4K\u20138K+) while preserving the exact same composition, layout, proportions, geometry, and camera angle.
 
 Do NOT add, remove, move, or redesign anything in the scene. The structure, architecture, landscaping, and all elements must remain 100% identical.
 
@@ -130,7 +130,7 @@ app.post('/ai-enhance', async (req, res) => {
   try {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({
-      model: process.env.IMAGE_MODEL || 'gemini-2.5-flash',
+      model: process.env.IMAGE_MODEL || 'gemini-2.0-flash-preview-image-generation',
       generationConfig: { responseModalities: ['image', 'text'] }
     });
 
@@ -161,5 +161,5 @@ app.post('/ai-enhance', async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => console.log(`RendrOne backend running on :${PORT}`));
