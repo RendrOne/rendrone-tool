@@ -1,7 +1,7 @@
 {
   "name": "rendrone-backend",
   "version": "1.0.0",
-  "description": "RendrOne backend — AI Render via Gemini",
+  "description": "RendrOne backend — AI Render via Gemini + per-link render limits",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.21.0",
+    "better-sqlite3": "^9.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.18.2"

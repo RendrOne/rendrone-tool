@@ -212,6 +212,62 @@
 
   * { scrollbar-width:thin; scrollbar-color:#1a1a1a transparent; }
 
+  /* ── AI RENDER OVERLAY ──────────────────────────────────── */
+  .ai-overlay { position:fixed; inset:0; background:#050505; z-index:8000; display:none; flex-direction:column; overflow:hidden; }
+  .ai-overlay.open { display:flex; }
+
+  .air-hdr { display:flex; align-items:center; justify-content:space-between; padding:.75rem 1.25rem; background:#0a0a0a; border-bottom:1px solid rgba(255,255,255,.07); flex-shrink:0; gap:.75rem; }
+  .air-back { display:flex; align-items:center; gap:.4rem; background:none; border:none; color:#555; font-size:.78rem; font-family:'DM Sans',sans-serif; cursor:pointer; padding:0; transition:color .15s; flex-shrink:0; }
+  .air-back:hover { color:#fff; }
+  .air-title { font-family:'Poppins',sans-serif; font-size:.88rem; font-weight:700; color:#fff; letter-spacing:.04em; }
+  .air-limit { font-size:.72rem; font-family:'DM Sans',sans-serif; color:#555; background:#111; border:1px solid #1a1a1a; border-radius:20px; padding:.3rem .85rem; white-space:nowrap; flex-shrink:0; transition:all .3s; }
+  .air-limit b { color:#fff; }
+  .air-limit.warn { border-color:rgba(255,180,0,.3); color:#f5a623; }
+  .air-limit.warn b { color:#f5a623; }
+  .air-limit.empty { border-color:rgba(220,50,50,.3); color:#e05555; }
+  .air-limit.empty b { color:#e05555; }
+
+  .air-sel-bar { display:flex; align-items:center; justify-content:space-between; padding:.85rem 1.25rem .65rem; flex-shrink:0; gap:.75rem; }
+  .air-sel-count { font-size:.74rem; color:#444; font-family:'DM Sans',sans-serif; }
+  .air-sel-count b { color:#fff; }
+  .btn-air-render { height:36px; padding:0 1.25rem; background:#fff; color:#000; border:none; border-radius:8px; font-family:'Poppins',sans-serif; font-size:.75rem; font-weight:700; cursor:pointer; transition:all .2s; letter-spacing:.03em; white-space:nowrap; }
+  .btn-air-render:disabled { background:#1a1a1a; color:#333; cursor:not-allowed; transform:none; }
+  .btn-air-render:not(:disabled):hover { background:#e0e0e0; transform:translateY(-1px); }
+
+  .air-grid { flex:1; overflow-y:auto; padding:.25rem 1.25rem 1.25rem; display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:.85rem; align-content:start; }
+  .air-sel-card { position:relative; border-radius:8px; overflow:hidden; border:2px solid #1a1a1a; cursor:pointer; transition:border-color .15s,transform .15s; background:#111; }
+  .air-sel-card:hover:not(.disabled) { border-color:#555; transform:translateY(-2px); }
+  .air-sel-card.selected { border-color:#fff; }
+  .air-sel-card.disabled { opacity:.3; cursor:not-allowed; pointer-events:none; }
+  .air-sel-card img { width:100%; aspect-ratio:16/9; object-fit:cover; display:block; }
+  .air-sel-check { position:absolute; top:.4rem; right:.4rem; width:22px; height:22px; border-radius:50%; background:rgba(0,0,0,.65); border:1.5px solid #333; display:flex; align-items:center; justify-content:center; font-size:.7rem; color:transparent; transition:all .15s; }
+  .air-sel-card.selected .air-sel-check { background:#fff; border-color:#fff; color:#000; }
+  .air-sel-num { position:absolute; bottom:0; left:0; right:0; padding:.3rem .5rem; background:linear-gradient(transparent,rgba(0,0,0,.75)); font-family:'Poppins',sans-serif; font-size:.58rem; font-weight:700; color:#777; }
+  .air-empty { grid-column:1/-1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:4rem 2rem; color:#2a2a2a; font-size:.8rem; text-align:center; gap:.4rem; line-height:1.7; }
+
+  .air-queue-hdr { padding:.85rem 1.25rem .5rem; font-family:'Poppins',sans-serif; font-size:.58rem; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:#2a2a2a; flex-shrink:0; }
+  .air-q-grid { flex:1; overflow-y:auto; padding:.25rem 1.25rem 1.25rem; display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:.85rem; align-content:start; }
+  .air-q-card { background:#0d0d0d; border:1px solid #1a1a1a; border-radius:10px; overflow:hidden; display:flex; flex-direction:column; transition:border-color .3s; }
+  .air-q-card.complete { border-color:rgba(76,175,80,.2); }
+  .air-q-card.failed { border-color:rgba(220,50,50,.2); }
+  .air-q-thumb { position:relative; width:100%; aspect-ratio:16/9; background:#111; overflow:hidden; }
+  .air-q-thumb img { width:100%; height:100%; object-fit:cover; display:block; transition:opacity .4s; }
+  .air-q-ov { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.55); transition:opacity .3s; }
+  .air-q-ov.hidden { opacity:0; pointer-events:none; }
+  .air-spinner { width:32px; height:32px; border:2.5px solid rgba(255,255,255,.15); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; }
+  .air-q-foot { padding:.55rem .75rem; display:flex; align-items:center; justify-content:space-between; gap:.5rem; min-height:38px; }
+  .air-status { font-family:'Poppins',sans-serif; font-size:.56rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; padding:.2rem .55rem; border-radius:20px; white-space:nowrap; }
+  .air-status.queued { background:rgba(255,255,255,.05); color:#333; }
+  .air-status.rendering { background:rgba(255,255,255,.09); color:#999; }
+  .air-status.complete { background:rgba(76,175,80,.13); color:#81c784; border:1px solid rgba(76,175,80,.22); }
+  .air-status.failed { background:rgba(220,50,50,.1); color:#e05555; border:1px solid rgba(220,50,50,.18); }
+  .air-q-actions { display:flex; gap:.3rem; flex-wrap:wrap; }
+  .air-act-btn { height:24px; padding:0 .6rem; font-family:'DM Sans',sans-serif; font-size:.62rem; font-weight:500; border-radius:5px; border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.05); color:#777; cursor:pointer; transition:all .15s; white-space:nowrap; }
+  .air-act-btn:hover { background:rgba(255,255,255,.12); color:#fff; border-color:rgba(255,255,255,.2); }
+  .air-act-btn.saved { background:rgba(76,175,80,.1); border-color:rgba(76,175,80,.25); color:#81c784; cursor:default; }
+  .air-limit-reached { padding:.65rem 1.25rem; background:rgba(220,50,50,.08); border-bottom:1px solid rgba(220,50,50,.15); font-size:.72rem; color:#e05555; font-family:'DM Sans',sans-serif; flex-shrink:0; display:none; }
+  .air-limit-reached.show { display:block; }
+
   /* ── MOBILE ─────────────────────────────────────── */
   @media (max-width: 768px) {
     html, body { height: 100dvh; }
@@ -463,6 +519,33 @@
   </div>
 </div>
 
+<!-- AI RENDER OVERLAY -->
+<div class="ai-overlay" id="ai-render-overlay">
+  <div class="air-hdr">
+    <div style="display:flex;align-items:center;gap:.85rem;">
+      <button class="air-back" onclick="closeAiRender()">&#8592; Back</button>
+      <span class="air-title">AI Render</span>
+    </div>
+    <div class="air-limit" id="air-limit-badge"><b id="air-remaining">15</b> / 15 renders remaining</div>
+  </div>
+  <div class="air-limit-reached" id="air-limit-reached">Render limit reached for this project. All 15 renders have been used.</div>
+
+  <!-- SELECTION VIEW -->
+  <div id="air-sel-view" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
+    <div class="air-sel-bar">
+      <span class="air-sel-count"><b id="air-sel-num">0</b> / <span id="air-total-shots">0</span> selected</span>
+      <button class="btn-air-render" id="btn-air-render" disabled onclick="startRenderQueue()">Render Selected</button>
+    </div>
+    <div class="air-grid" id="air-grid"></div>
+  </div>
+
+  <!-- QUEUE VIEW -->
+  <div id="air-queue-view" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
+    <div class="air-queue-hdr">Render Queue</div>
+    <div class="air-q-grid" id="air-q-grid"></div>
+  </div>
+</div>
+
 <div class="toast" id="toast"><span id="t-ico">ok</span><span id="t-msg">Done</span></div>
 
 <script>
@@ -697,52 +780,7 @@ function handleDownload(type) {
   closeDlDropdown();
   if(type === 'pdf') makePDF();
   else if(type === 'images') downloadImages();
-  else if(type === 'ai') handleAiEnhance();
-}
-
-async function handleAiEnhance() {
-  if (!AI_BACKEND_URL) {
-    toast('i', 'AI Render backend not connected yet — coming soon!');
-    return;
-  }
-  if (!shots.length) return;
-
-  const bg = document.getElementById('pdf-bg');
-  const sub = document.getElementById('pdf-sub');
-  bg.classList.add('open');
-
-  try {
-    for (let i = 0; i < shots.length; i++) {
-      sub.textContent = `AI Enhancing ${i + 1} of ${shots.length}...`;
-      await tick();
-
-      const base64 = shots[i].dataURL.split(',')[1];
-      const mimeType = shots[i].dataURL.startsWith('data:image/png') ? 'image/png' : 'image/jpeg';
-
-      const resp = await fetch(`${AI_BACKEND_URL}/ai-enhance`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: base64, mimeType })
-      });
-
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({}));
-        throw new Error(err.error || `Server error ${resp.status}`);
-      }
-
-      const { enhanced, mimeType: outMime } = await resp.json();
-      shots[i].dataURL = `data:${outMime || 'image/jpeg'};base64,${enhanced}`;
-    }
-
-    rebuildLib();
-    bg.classList.remove('open');
-    toast('ok', `${shots.length} image${shots.length > 1 ? 's' : ''} AI enhanced!`);
-
-  } catch (err) {
-    bg.classList.remove('open');
-    toast('!', `AI Render failed: ${err.message}`);
-    console.error('[AI Render]', err);
-  }
+  else if(type === 'ai') openAiRender();
 }
 
 function downloadImages() {
@@ -770,6 +808,7 @@ const PRESETS=[
 // Presets available via injectContent() if needed
 
 // STATE
+const PROJECT_ID = new URLSearchParams(window.location.search).get('project') || '';
 let shots=[], shotIdx=0, currentSrc='', lastRaw='';
 let capStream=null, capVideo=null, capReady=false;
 let libOpen=false, libHideTimer=null;
@@ -1099,6 +1138,237 @@ document.addEventListener('keydown',e=>{
 });
 
 window.addEventListener('beforeunload',()=>stopCapture());
+
+// ── AI RENDER ────────────────────────────────────────────────
+const AI_CONCURRENCY = 3;
+let aiSelected = [];
+let aiQueue = [];
+let aiActiveCount = 0;
+let aiRemainingRenders = 15;
+
+async function openAiRender() {
+  if (!AI_BACKEND_URL) {
+    toast('!', 'AI Render: set AI_BACKEND_URL in the code first');
+    return;
+  }
+  if (!shots.length) {
+    toast('!', 'Save some screenshots first, then open AI Render');
+    return;
+  }
+  aiSelected = [];
+  document.getElementById('ai-render-overlay').classList.add('open');
+  showAirSelView();
+  await fetchAiStatus();
+  buildAirGrid();
+}
+
+function closeAiRender() {
+  document.getElementById('ai-render-overlay').classList.remove('open');
+}
+
+async function fetchAiStatus() {
+  try {
+    const r = await fetch(`${AI_BACKEND_URL}/renders/status?project=${encodeURIComponent(PROJECT_ID || 'default')}`);
+    const data = await r.json();
+    aiRemainingRenders = typeof data.remaining === 'number' ? data.remaining : 15;
+  } catch(e) { aiRemainingRenders = 15; }
+  updateAirLimitBadge();
+}
+
+function updateAirLimitBadge() {
+  document.getElementById('air-remaining').textContent = aiRemainingRenders;
+  const badge = document.getElementById('air-limit-badge');
+  const banner = document.getElementById('air-limit-reached');
+  badge.className = 'air-limit' + (aiRemainingRenders === 0 ? ' empty' : aiRemainingRenders <= 3 ? ' warn' : '');
+  banner.classList.toggle('show', aiRemainingRenders === 0);
+}
+
+function buildAirGrid() {
+  const grid = document.getElementById('air-grid');
+  document.getElementById('air-total-shots').textContent = shots.length;
+  grid.innerHTML = '';
+  if (!shots.length) {
+    grid.innerHTML = '<div class="air-empty">No screenshots saved yet.<br>Go back and save screenshots from the visualization first.</div>';
+    return;
+  }
+  shots.forEach((s, i) => {
+    const card = document.createElement('div');
+    card.className = 'air-sel-card';
+    card.dataset.idx = i;
+    card.innerHTML = `<img src="${s.dataURL}" alt=""><div class="air-sel-check">&#10003;</div><div class="air-sel-num">#${String(s.index).padStart(2,'0')}</div>`;
+    card.addEventListener('click', () => toggleAirSelect(i));
+    grid.appendChild(card);
+  });
+  updateAirSelUI();
+}
+
+function toggleAirSelect(idx) {
+  const card = document.querySelector(`.air-sel-card[data-idx="${idx}"]`);
+  if (!card || card.classList.contains('disabled')) return;
+  if (aiSelected.includes(idx)) {
+    aiSelected = aiSelected.filter(i => i !== idx);
+    card.classList.remove('selected');
+  } else {
+    if (aiSelected.length >= aiRemainingRenders) return;
+    aiSelected.push(idx);
+    card.classList.add('selected');
+  }
+  updateAirSelUI();
+}
+
+function updateAirSelUI() {
+  const n = aiSelected.length;
+  document.getElementById('air-sel-num').textContent = n;
+  document.getElementById('btn-air-render').disabled = n === 0 || aiRemainingRenders === 0;
+  document.querySelectorAll('.air-sel-card').forEach(card => {
+    const idx = parseInt(card.dataset.idx);
+    card.classList.toggle('disabled', aiRemainingRenders === 0 || (n >= aiRemainingRenders && !aiSelected.includes(idx)));
+  });
+}
+
+function showAirSelView() {
+  document.getElementById('air-sel-view').style.display = 'flex';
+  document.getElementById('air-queue-view').style.display = 'none';
+}
+
+function showAirQueueView() {
+  document.getElementById('air-sel-view').style.display = 'none';
+  document.getElementById('air-queue-view').style.display = 'flex';
+}
+
+function startRenderQueue() {
+  if (!aiSelected.length) return;
+  aiQueue = aiSelected.map((shotIdx, qi) => ({ shotIdx, status:'queued', enhancedDataURL:null, cardIdx:qi }));
+  aiActiveCount = 0;
+  buildQueueCards();
+  showAirQueueView();
+  processAirQueue();
+}
+
+function buildQueueCards() {
+  const grid = document.getElementById('air-q-grid');
+  grid.innerHTML = '';
+  aiQueue.forEach((item, i) => {
+    const s = shots[item.shotIdx];
+    const card = document.createElement('div');
+    card.className = 'air-q-card';
+    card.innerHTML = `
+      <div class="air-q-thumb">
+        <img id="airqi-${i}" src="${s.dataURL}" alt="">
+        <div class="air-q-ov" id="airov-${i}"></div>
+      </div>
+      <div class="air-q-foot">
+        <span class="air-status queued" id="airsts-${i}">Queued</span>
+        <div class="air-q-actions" id="airact-${i}"></div>
+      </div>`;
+    grid.appendChild(card);
+    item.cardEl = card;
+  });
+}
+
+function processAirQueue() {
+  for (const item of aiQueue) {
+    if (aiActiveCount >= AI_CONCURRENCY) break;
+    if (item.status === 'queued') renderQueueItem(item);
+  }
+}
+
+async function renderQueueItem(item) {
+  const i = item.cardIdx;
+  item.status = 'rendering';
+  aiActiveCount++;
+
+  const statusEl = document.getElementById(`airsts-${i}`);
+  const overlayEl = document.getElementById(`airov-${i}`);
+  statusEl.textContent = 'Rendering...';
+  statusEl.className = 'air-status rendering';
+  overlayEl.innerHTML = '<div class="air-spinner"></div>';
+  overlayEl.classList.remove('hidden');
+
+  const s = shots[item.shotIdx];
+  const base64 = s.dataURL.split(',')[1];
+  const mimeType = s.dataURL.startsWith('data:image/png') ? 'image/png' : 'image/jpeg';
+
+  try {
+    const resp = await fetch(`${AI_BACKEND_URL}/ai-enhance`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: base64, mimeType, projectId: PROJECT_ID || 'default' })
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.error || `Error ${resp.status}`);
+    }
+
+    const { enhanced, mimeType: outMime, remaining } = await resp.json();
+    item.enhancedDataURL = `data:${outMime || 'image/jpeg'};base64,${enhanced}`;
+    item.status = 'complete';
+
+    if (typeof remaining === 'number') { aiRemainingRenders = remaining; updateAirLimitBadge(); }
+
+    document.getElementById(`airqi-${i}`).src = item.enhancedDataURL;
+    overlayEl.classList.add('hidden');
+    statusEl.textContent = 'Complete';
+    statusEl.className = 'air-status complete';
+    item.cardEl.classList.add('complete');
+    buildQueueCardActions(item, i);
+
+  } catch(err) {
+    item.status = 'failed';
+    overlayEl.classList.add('hidden');
+    statusEl.textContent = 'Failed';
+    statusEl.className = 'air-status failed';
+    item.cardEl.classList.add('failed');
+    console.error('[AI Render]', err.message);
+  }
+
+  aiActiveCount--;
+  processAirQueue();
+}
+
+function buildQueueCardActions(item, i) {
+  const el = document.getElementById(`airact-${i}`);
+  const s = shots[item.shotIdx];
+
+  const prev = document.createElement('button');
+  prev.className = 'air-act-btn';
+  prev.textContent = 'Preview';
+  prev.onclick = () => {
+    document.getElementById('prev-img').src = item.enhancedDataURL;
+    document.getElementById('prev-title').textContent = `AI Render — Screenshot #${String(s.index).padStart(2,'00')}`;
+    document.getElementById('prev-bg').classList.add('open');
+  };
+
+  const dl = document.createElement('button');
+  dl.className = 'air-act-btn';
+  dl.textContent = 'Download';
+  dl.onclick = () => {
+    const a = document.createElement('a');
+    a.href = item.enhancedDataURL;
+    a.download = `RendrOne-AIRender-${String(s.index).padStart(2,'0')}.jpg`;
+    a.click();
+  };
+
+  const save = document.createElement('button');
+  save.className = 'air-act-btn';
+  save.textContent = 'Save';
+  save.onclick = () => {
+    const timeStr = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    shotIdx++;
+    shots.push({ dataURL: item.enhancedDataURL, time: timeStr, index: shotIdx, aiRendered: true });
+    addCard(item.enhancedDataURL, timeStr, shotIdx);
+    updateCounts();
+    save.textContent = 'Saved ✓';
+    save.className = 'air-act-btn saved';
+    save.onclick = null;
+    toast('ok', 'AI render saved to library');
+  };
+
+  el.appendChild(prev);
+  el.appendChild(dl);
+  el.appendChild(save);
+}
 
 // AUTO-LOAD FROM ?project= OR ?embed= URL PARAM
 (function(){
