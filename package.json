@@ -1,9 +1,0 @@
-{
-  "name": "rendrone-tool",
-  "scripts": {
-    "start": "node backend/server.js"
-  },
-  "engines": {
-    "node": ">=18"
-  }
-}
