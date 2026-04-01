@@ -76,31 +76,34 @@ app.get('/renders/status', (req, res) => {
   });
 });
 
-const ENHANCE_PROMPT = `Upscale this image to ultra high resolution (4K–8K+) while preserving the exact same composition, layout, proportions, geometry, and camera angle.
+const ENHANCE_PROMPT = `You are upscaling and photo-realifying an architectural rendering. Follow these rules absolutely:
 
-Do NOT add, remove, move, or redesign anything in the scene. The structure, architecture, landscaping, and all elements must remain 100% identical.
+PRESERVE WITH ZERO CHANGES:
+- Every color, material, finish, and texture exactly as shown — no exceptions
+- All lighting fixtures, their shape, position, and design must remain pixel-identical
+- Every architectural element: walls, rooflines, windows, doors, columns, overhangs
+- All landscaping, hardscape, furniture, and objects — exact positions and appearances
+- The camera angle, composition, framing, and perspective — do not shift anything
+- Existing lighting mood, time of day, and shadow direction
 
-Strictly preserve all original materials and finishes. Do not alter siding types, textures, colors, patterns, or material definitions in any way.
+REMOVE ONLY:
+- Any Twinmotion UI overlays, navigation buttons, icons, or interface elements that appear on top of the scene
+- Any on-screen watermarks or control icons that are not part of the architecture
 
-Remove any non-scene UI elements, overlays, or artifacts such as buttons, navigation icons, interface controls, or Twinmotion display elements. The final image should contain only the architectural scene itself.
+ENHANCE ONLY:
+- Overall image resolution and sharpness (upscale to maximum quality)
+- Surface texture detail and micro-detail to look photographic
+- Reduce flat or plastic CGI appearance while keeping all colors identical
+- Make shadows and highlights feel physically real without shifting their direction or intensity
 
-Convert the image from a rendered/CG appearance into a true-to-life photograph. Replace any artificial or "animated" look with real-world photographic realism.
+DO NOT:
+- Change any colors — not walls, not roofs, not wood, not metal, not glass, not plants
+- Alter any lighting fixtures or add/remove any light sources
+- Redesign, move, add, or remove any element of the scene
+- Apply any creative interpretation — this is a strict upscale and realism pass only
 
-Enhance materials with physically accurate behavior:
-- Natural light interaction (correct reflections, roughness, and shading)
-- Subtle real-world imperfections (micro-texture, slight variation, natural wear)
-- No artificial smoothing or plastic appearance
+The output must look like a professional photograph of the exact same scene with no creative changes whatsoever.`;
 
-Simulate real camera characteristics:
-- Realistic exposure and dynamic range
-- Natural depth of field (very subtle, not stylized)
-- Accurate contrast and color balance
-- Soft, physically correct shadows and highlight roll-off
-- Real lens behavior without distortion of composition
-
-Eliminate all CGI artifacts, overly clean surfaces, and rendering noise. Replace with grounded, tactile realism.
-
-The final result must look like a real photograph taken with a professional camera of the exact same scene — clearly more lifelike and believable — while remaining completely identical in design, materials, and composition.`;
 
 app.post('/ai-enhance', async (req, res) => {
   if (!process.env.GEMINI_API_KEY) {
