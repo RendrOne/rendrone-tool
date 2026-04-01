@@ -718,7 +718,7 @@ const PRESETS=[
 // STATE
 let shots=[], shotIdx=0, currentSrc='', lastRaw='';
 let capStream=null, capVideo=null, capReady=false;
-let libOpen=false;
+let libOpen=false, libHideTimer=null;
 
 const TOOLBAR_H = 56;
 
@@ -857,7 +857,7 @@ async function doCapture(){
     addCard(croppedDataURL,timeStr,shotIdx);
     updateCounts();
 
-    if(wasLibOpen) setTimeout(openLibrary, 100);
+    if(wasLibOpen) setTimeout(openLibraryBriefly, 100);
 
     toast('ok',`Screenshot #${shotIdx} saved!`);
 
@@ -875,7 +875,10 @@ function stopCapture(fromBrowser=false){
 }
 
 // LIBRARY DRAWER
-function toggleLibrary(){if(libOpen)closeLibrary();else openLibrary();}
+function toggleLibrary(){
+  clearTimeout(libHideTimer);
+  if(libOpen)closeLibrary();else openLibrary();
+}
 
 function openLibrary(){
   libOpen=true;
@@ -890,6 +893,12 @@ function closeLibrary(){
   document.getElementById('lib-arrow').innerHTML='&#9650;';
 }
 
+function openLibraryBriefly(){
+  openLibrary();
+  clearTimeout(libHideTimer);
+  libHideTimer=setTimeout(closeLibrary, 2000);
+}
+
 function addCard(dataURL,time,num){
   const scroll=document.getElementById('lib-scroll');
   const empty=document.getElementById('lib-empty');
@@ -901,7 +910,7 @@ function addCard(dataURL,time,num){
   d.querySelector('.shot-del').addEventListener('click',e=>{e.stopPropagation();delShot(i);});
   scroll.appendChild(d);
   setTimeout(()=>scroll.scrollLeft=scroll.scrollWidth,40);
-  openLibrary();
+  openLibraryBriefly();
 }
 
 function delShot(i){shots.splice(i,1);rebuildLib();updateCounts();toast('x','Removed');}
