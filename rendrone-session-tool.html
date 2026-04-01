@@ -305,8 +305,9 @@
         <span id="lib-arrow">&#9650;</span> Library
       </button>
       <button class="btn-save" id="btn-save" onclick="captureNow()">
-        Save Screenshot <span class="kbd-hint">Cmd+S</span>
+        Save Screenshot <span class="kbd-hint" id="kbd-hint-span">Cmd+S</span>
       </button>
+      <input type="file" id="mobile-upload" accept="image/*" style="display:none;" onchange="handleMobileUpload(this)">
 
       <!-- Download Images button + dropdown -->
       <div class="dl-wrap" id="dl-wrap">
@@ -714,9 +715,11 @@ function injectContent(raw,label,knownSrc){
 }
 
 // CAPTURE
+const isMobile = !navigator.mediaDevices?.getDisplayMedia;
+
 function captureNow(){
-  if(!navigator.mediaDevices?.getDisplayMedia) {
-    toast('i','Use your device\'s screenshot button — screen capture isn\'t supported on this mobile browser.');
+  if(isMobile){
+    document.getElementById('mobile-upload').click();
     return;
   }
   if(capReady&&capStream&&capVideo&&capVideo.videoWidth>0){
@@ -724,6 +727,29 @@ function captureNow(){
   } else {
     openShareModal();
   }
+}
+
+function handleMobileUpload(input){
+  const file = input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    const dataURL = e.target.result;
+    const timeStr = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    shotIdx++;
+    shots.push({dataURL, time:timeStr, index:shotIdx});
+    addCard(dataURL, timeStr, shotIdx);
+    updateCounts();
+    toast('ok', `Image #${shotIdx} added!`);
+  };
+  reader.readAsDataURL(file);
+  input.value = '';
+}
+
+if(isMobile){
+  const btn = document.getElementById('btn-save');
+  btn.innerHTML = 'Add Image';
+  btn.title = 'Take a screenshot on your device, then tap here to upload it';
 }
 
 function openShareModal(){
