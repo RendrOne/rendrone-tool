@@ -427,32 +427,31 @@
   <div class="pdf-sub" id="pdf-sub">Preparing</div>
 </div>
 
-<!-- BROWSER WARNING MODAL -->
+<!-- MOBILE VIEWER MODAL -->
 <div class="modal-bg" id="browser-modal">
-  <div class="sp-card" style="max-width:420px;">
+  <div class="sp-card" style="max-width:400px;">
     <div class="sp-head">
       <div class="sp-head-left">
-        <div class="sp-head-icon" style="font-size:1.3rem;">&#9888;</div>
+        <div class="sp-head-icon" style="font-size:1.2rem;">&#128247;</div>
         <div class="sp-head-text">
-          <h3>Switch to Chrome for Full Access</h3>
-          <p>Safari doesn't support screenshot capture</p>
+          <h3>Viewer Mode</h3>
+          <p>Mobile &amp; tablet — view only</p>
         </div>
       </div>
       <button class="sp-close" onclick="closeBrowserModal()">x</button>
     </div>
     <div style="padding:1.25rem 1.5rem;display:flex;flex-direction:column;gap:.85rem;">
-      <p style="font-size:.78rem;color:#555;line-height:1.65;">
-        This tool uses your browser's screen capture to save screenshots of the visualization.
-        <b style="color:#777;">Safari on iPhone and iPad doesn't support this feature.</b>
-        Open this page in <b style="color:#aaa;">Chrome</b> to get full access — it only takes a second.
+      <p style="font-size:.78rem;color:#555;line-height:1.7;">
+        You can explore the visualization on this device, but
+        <b style="color:#888;">screenshot saving and AI Enhance require a desktop or laptop browser.</b>
       </p>
-      <a id="chrome-link" href="#" style="display:flex;align-items:center;justify-content:center;gap:.6rem;padding:.85rem;background:#fff;color:#000;border-radius:8px;font-family:'Poppins',sans-serif;font-size:.82rem;font-weight:700;text-decoration:none;letter-spacing:.03em;">
-        <svg width="18" height="18" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="24" cy="24" r="24" fill="#fff"/><path d="M24 14.4a9.6 9.6 0 1 1 0 19.2A9.6 9.6 0 0 1 24 14.4Z" fill="#4285F4"/><path d="M14.4 24A9.6 9.6 0 0 1 24 14.4h12.72A14.4 14.4 0 1 0 24 38.4l6.36-11.02A9.6 9.6 0 0 1 14.4 24Z" fill="#34A853"/><path d="M36.72 14.4H24a14.4 14.4 0 0 1 12.48 21.6L36.72 14.4Z" fill="#FBBC05"/><path d="m30.36 27.38-6.36 11.02a14.4 14.4 0 0 0 12.48-21.6L30.36 27.38Z" fill="#EA4335"/><circle cx="24" cy="24" r="6" fill="#fff"/></svg>
-        Open in Chrome
-      </a>
-      <p style="font-size:.65rem;color:#333;text-align:center;line-height:1.6;">
-        Don't have Chrome? <a href="https://apps.apple.com/app/google-chrome/id535886823" target="_blank" style="color:#555;text-decoration:underline;">Download it free from the App Store</a>
-      </p>
+      <div style="background:#0a0a0a;border:1px solid #1a1a1a;border-radius:8px;padding:.85rem 1rem;display:flex;flex-direction:column;gap:.5rem;">
+        <div style="font-size:.68rem;color:#555;display:flex;align-items:center;gap:.5rem;"><span style="color:#4CAF50;">&#10003;</span> Browse the 3D visualization</div>
+        <div style="font-size:.68rem;color:#555;display:flex;align-items:center;gap:.5rem;"><span style="color:#4CAF50;">&#10003;</span> Explore colors and materials</div>
+        <div style="font-size:.68rem;color:#333;display:flex;align-items:center;gap:.5rem;"><span style="color:#333;">&#215;</span> Save screenshots</div>
+        <div style="font-size:.68rem;color:#333;display:flex;align-items:center;gap:.5rem;"><span style="color:#333;">&#215;</span> Export PDF / AI Enhance</div>
+      </div>
+      <p style="font-size:.65rem;color:#2a2a2a;text-align:center;line-height:1.6;">Open this link on a computer to access all features.</p>
     </div>
   </div>
 </div>
@@ -744,11 +743,10 @@ function injectContent(raw,label,knownSrc){
 }
 
 // CAPTURE
-// Detect iOS Safari (not Chrome on iOS, which has CriOS in UA)
-const isIosSafari = /iP(hone|ad|od)/.test(navigator.userAgent) && !/CriOS/.test(navigator.userAgent);
+const isMobileDevice = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
 function captureNow(){
-  if(isIosSafari){ openBrowserModal(); return; }
+  if(isMobileDevice){ openBrowserModal(); return; }
   if(capReady&&capStream&&capVideo&&capVideo.videoWidth>0){
     doCapture();
   } else {
@@ -757,16 +755,14 @@ function captureNow(){
 }
 
 function openBrowserModal(){
-  const chromeUrl = location.href.replace(/^https:\/\//,'googlechromes://').replace(/^http:\/\//,'googlechrome://');
-  document.getElementById('chrome-link').href = chromeUrl;
   document.getElementById('browser-modal').classList.add('open');
 }
 function closeBrowserModal(){
   document.getElementById('browser-modal').classList.remove('open');
 }
 
-// Show browser warning automatically on page load if iOS Safari
-if(isIosSafari){ setTimeout(openBrowserModal, 400); }
+// Show viewer-only notice automatically on mobile page load
+if(isMobileDevice){ setTimeout(openBrowserModal, 400); }
 
 function openShareModal(){
   document.getElementById('share-modal').classList.add('open');
