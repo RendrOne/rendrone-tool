@@ -8,7 +8,6 @@ const path = require('path');
 const app = express();
 const RENDER_LIMIT = 15;
 
-// ── PERSISTENT STORE ──────────────────────────────────────────
 const DATA_DIR  = process.env.DATA_DIR || __dirname;
 const DATA_FILE = path.join(DATA_DIR, 'renders.json');
 
@@ -30,7 +29,6 @@ function getProject(pid) {
 function calcRemaining(rec) {
   return Math.max(0, RENDER_LIMIT - (rec.used + rec.reserved));
 }
-
 function tryReserve(pid) {
   const rec = getProject(pid);
   if (calcRemaining(rec) <= 0) return null;
@@ -50,7 +48,6 @@ function returnReserved(pid) {
   saveStore(store);
 }
 
-// ── CORS ──────────────────────────────────────────────────────
 const allowed = (process.env.ALLOWED_ORIGINS || 'https://rendrone.github.io')
   .split(',').map(o => o.trim());
 
@@ -62,12 +59,10 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '25mb' }));
 
-// ── HEALTH ────────────────────────────────────────────────────
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// ── GET /renders/status ───────────────────────────────────────
 app.get('/renders/status', (req, res) => {
   const { project } = req.query;
   if (!project) return res.status(400).json({ error: 'project param required' });
@@ -81,7 +76,6 @@ app.get('/renders/status', (req, res) => {
   });
 });
 
-// ── POST /ai-enhance ──────────────────────────────────────────
 const ENHANCE_PROMPT = `Upscale this image to ultra high resolution (4K–8K+) while preserving the exact same composition, layout, proportions, geometry, and camera angle.
 
 Do NOT add, remove, move, or redesign anything in the scene. The structure, architecture, landscaping, and all elements must remain 100% identical.
@@ -125,7 +119,7 @@ app.post('/ai-enhance', async (req, res) => {
   try {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({
-      model: process.env.IMAGE_MODEL || 'gemini-2.0-flash-exp',
+      model: process.env.IMAGE_MODEL || 'gemini-2.0-flash',
       generationConfig: { responseModalities: ['image', 'text'] }
     });
 
