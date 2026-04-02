@@ -1288,19 +1288,23 @@ function buildQueueCards() {
   grid.innerHTML = '';
   aiQueue.forEach((item, i) => {
     const s = shots[item.shotIdx];
+    const isComplete = item.status === 'complete';
+    const isFailed = item.status === 'failed';
+    const thumbSrc = (isComplete && item.enhancedDataURL) ? item.enhancedDataURL : s.dataURL;
     const card = document.createElement('div');
-    card.className = 'air-q-card';
+    card.className = 'air-q-card' + (isComplete ? ' complete' : isFailed ? ' failed' : '');
     card.innerHTML = `
       <div class="air-q-thumb">
-        <img id="airqi-${i}" src="${s.dataURL}" alt="">
-        <div class="air-q-ov" id="airov-${i}"></div>
+        <img id="airqi-${i}" src="${thumbSrc}" alt="">
+        <div class="air-q-ov hidden" id="airov-${i}"></div>
       </div>
       <div class="air-q-foot">
-        <span class="air-status queued" id="airsts-${i}">Queued</span>
+        <span class="air-status ${item.status}" id="airsts-${i}">${isComplete ? 'Complete' : isFailed ? 'Failed' : 'Queued'}</span>
         <div class="air-q-actions" id="airact-${i}"></div>
       </div>`;
     grid.appendChild(card);
     item.cardEl = card;
+    if (isComplete) buildQueueCardActions(item, i);
   });
 }
 
