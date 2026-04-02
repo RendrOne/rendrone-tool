@@ -112,15 +112,31 @@ app.post('/ai-enhance', async (req, res) => {
 
   try {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({
-      model: process.env.IMAGE_MODEL || 'gemini-3.1-flash-image-preview',
-      generationConfig: { responseModalities: ['image', 'text'] }
-    });
+    const model = genAI.getGenerativeModel(
+      { model: process.env.IMAGE_MODEL || 'gemini-3.1-flash-image-preview',
+        generationConfig: { responseModalities: ['image', 'text'] } },
+      { timeout: 180000 }
+    );
 
-    const result = await model.generateContent([
-      { inlineData: { data: image, mimeType } },
-      ENHANCE_PROMPT
-    ]);
+    // Retry up to 2 times on 503 timeout errors
+    let result, lastErr;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        result = await model.generateContent([
+          { inlineData: { data: image, mimeType } },
+          ENHANCE_PROMPT
+        ]);
+        break;
+      } catch(e) {
+        lastErr = e;
+        if (attempt < 2 && (e.message?.includes('503') || e.message?.includes('Deadline'))) {
+          await new Promise(r => setTimeout(r, 3000 * (attempt + 1)));
+          continue;
+        }
+        throw e;
+      }
+    }
+    if (!result) throw lastErr;
 
     const candidates = result.response?.candidates;
     if (!candidates?.length) throw new Error('No response from AI model');
@@ -145,4 +161,5 @@ app.post('/ai-enhance', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => console.log(`RendrOne backend running on :${PORT}`));
+const server = app.listen(PORT, () => console.log(`RendrOne backend running on :${PORT}`));
+server.timeout = 210000; // 3.5 min — longer than the 3-min Gemini timeout
