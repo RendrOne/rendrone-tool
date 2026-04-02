@@ -76,33 +76,23 @@ app.get('/renders/status', (req, res) => {
   });
 });
 
-const ENHANCE_PROMPT = `You are upscaling and photo-realifying an architectural rendering. Follow these rules absolutely:
+const ENHANCE_PROMPT = `Transform this architectural rendering into a photorealistic image that looks like it was taken with a professional camera.
 
-PRESERVE WITH ZERO CHANGES:
-- Every color, material, finish, and texture exactly as shown — no exceptions
-- All lighting fixtures, their shape, position, and design must remain pixel-identical
-- Every architectural element: walls, rooflines, windows, doors, columns, overhangs
-- All landscaping, hardscape, furniture, and objects — exact positions and appearances
-- The camera angle, composition, framing, and perspective — do not shift anything
-- Existing lighting mood, time of day, and shadow direction
+Make these enhancements dramatically visible:
+- Convert all surfaces from CG/rendered appearance to real photographic texture and depth
+- Enhance material realism: wood grain, concrete texture, stone, glass reflections, metal finishes
+- Add photographic lighting quality: natural shadows, realistic highlights, subtle ambient occlusion
+- Increase overall sharpness and detail to the maximum
+- Remove any Twinmotion UI elements, buttons, or overlays from the image
 
-REMOVE ONLY:
-- Any Twinmotion UI overlays, navigation buttons, icons, or interface elements that appear on top of the scene
-- Any on-screen watermarks or control icons that are not part of the architecture
+Keep these exactly the same:
+- All colors — do not shift or alter any material or surface colors
+- All lighting fixtures — keep their exact shape, position, and design
+- The composition, camera angle, and framing
+- All architectural elements, landscaping, and objects in their exact positions
 
-ENHANCE ONLY:
-- Overall image resolution and sharpness (upscale to maximum quality)
-- Surface texture detail and micro-detail to look photographic
-- Reduce flat or plastic CGI appearance while keeping all colors identical
-- Make shadows and highlights feel physically real without shifting their direction or intensity
+The result should look strikingly more realistic and photographic than the input while being the same scene.`;
 
-DO NOT:
-- Change any colors — not walls, not roofs, not wood, not metal, not glass, not plants
-- Alter any lighting fixtures or add/remove any light sources
-- Redesign, move, add, or remove any element of the scene
-- Apply any creative interpretation — this is a strict upscale and realism pass only
-
-The output must look like a professional photograph of the exact same scene with no creative changes whatsoever.`;
 
 
 app.post('/ai-enhance', async (req, res) => {
@@ -122,7 +112,7 @@ app.post('/ai-enhance', async (req, res) => {
   try {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({
-      model: process.env.IMAGE_MODEL || 'gemini-2.5-flash-image',
+      model: process.env.IMAGE_MODEL || 'gemini-3.1-flash-image-preview',
       generationConfig: { responseModalities: ['image', 'text'] }
     });
 

@@ -1348,7 +1348,7 @@ async function renderQueueItem(item) {
   const s = shots[item.shotIdx];
 
   // Compress to max 1280px before sending — reduces payload 4-8x and speeds up API call
-  const compressed = await compressForAI(s.dataURL, 1280, 0.82);
+  const compressed = await compressForAI(s.dataURL, 1920, 0.92);
   const base64 = compressed.split(',')[1];
   const mimeType = 'image/jpeg';
 
