@@ -81,26 +81,31 @@ app.get('/renders/status', (req, res) => {
   });
 });
 
-const ENHANCE_PROMPT = `You are a professional architectural photographer. Your job is to take this 3D architectural rendering and make it indistinguishable from a real photograph taken on location with a professional camera.
+const ENHANCE_PROMPT = `Upscale this image to ultra high resolution (4K–8K+) while preserving the exact same composition, layout, proportions, geometry, and camera angle.
 
-PHOTOREALISM REQUIREMENTS — apply these strongly:
-- Replace all CG/rendered surface appearance with real photographic texture, depth, and tactile quality
-- Wood should have real grain, pores, and natural variation. Concrete should have pores and subtle staining. Stone should have real crystalline texture. Glass should have realistic reflections and slight distortion. Metal should have brushed or polished surfaces with real reflectivity
-- Lighting must look physically real: soft penumbra shadows, natural caustics on water, realistic sky reflections in glass, bounce light in shaded areas
-- Add photographic qualities: natural lens behavior, real depth of field, accurate exposure and contrast
-- Every surface must look like you could reach out and touch it
+Do NOT add, remove, move, or redesign anything in the scene. The structure, architecture, landscaping, and all elements must remain 100% identical.
 
-STRICT PRESERVATION — never change these:
-- All colors exactly as shown — zero color shifting on any surface, material, or element
-- All lighting fixture shapes, designs, and positions — do not alter them in any way
-- All architectural geometry, layout, proportions — nothing moves or changes shape
-- All landscaping, furniture, objects — exact same positions
-- Camera angle and framing — do not alter composition at all
+Strictly preserve all original materials and finishes. Do not alter siding types, textures, colors, patterns, or material definitions in any way.
 
-ALSO DO:
-- Remove any Twinmotion UI overlays, buttons, icons, or software interface elements visible in the image
+Remove any non-scene UI elements, overlays, or artifacts such as buttons, navigation icons, interface controls, or Twinmotion display elements. The final image should contain only the architectural scene itself.
 
-The final image must look like a real photograph of this exact scene — same colors, same design, same everything — just photographic instead of rendered.`;
+Convert the image from a rendered/CG appearance into a true-to-life photograph. Replace any artificial or "animated" look with real-world photographic realism.
+
+Enhance materials with physically accurate behavior:
+- Natural light interaction (correct reflections, roughness, and shading)
+- Subtle real-world imperfections (micro-texture, slight variation, natural wear)
+- No artificial smoothing or plastic appearance
+
+Simulate real camera characteristics:
+- Realistic exposure and dynamic range
+- Natural depth of field (very subtle, not stylized)
+- Accurate contrast and color balance
+- Soft, physically correct shadows and highlight roll-off
+- Real lens behavior without distortion of composition
+
+Eliminate all CGI artifacts, overly clean surfaces, and rendering noise. Replace with grounded, tactile realism.
+
+The final result must look like a real photograph taken with a professional camera of the exact same scene — clearly more lifelike and believable — while remaining completely identical in design, materials, and composition.`;
 
 
 
