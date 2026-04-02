@@ -81,31 +81,7 @@ app.get('/renders/status', (req, res) => {
   });
 });
 
-const ENHANCE_PROMPT = `Upscale this image to ultra high resolution (4K–8K+) while preserving the exact same composition, layout, proportions, geometry, and camera angle.
-
-Do NOT add, remove, move, or redesign anything in the scene. The structure, architecture, landscaping, and all elements must remain 100% identical.
-
-Strictly preserve all original materials and finishes. Do not alter siding types, textures, colors, patterns, or material definitions in any way.
-
-Remove any non-scene UI elements, overlays, or artifacts such as buttons, navigation icons, interface controls, or Twinmotion display elements. The final image should contain only the architectural scene itself.
-
-Convert the image from a rendered/CG appearance into a true-to-life photograph. Replace any artificial or "animated" look with real-world photographic realism.
-
-Enhance materials with physically accurate behavior:
-- Natural light interaction (correct reflections, roughness, and shading)
-- Subtle real-world imperfections (micro-texture, slight variation, natural wear)
-- No artificial smoothing or plastic appearance
-
-Simulate real camera characteristics:
-- Realistic exposure and dynamic range
-- Natural depth of field (very subtle, not stylized)
-- Accurate contrast and color balance
-- Soft, physically correct shadows and highlight roll-off
-- Real lens behavior without distortion of composition
-
-Eliminate all CGI artifacts, overly clean surfaces, and rendering noise. Replace with grounded, tactile realism.
-
-The final result must look like a real photograph taken with a professional camera of the exact same scene — clearly more lifelike and believable — while remaining completely identical in design, materials, and composition.`;
+const ENHANCE_PROMPT = `Transform this architectural rendering into a professional real estate photograph. Keep every material, color, texture, and design element exactly as shown — do not change anything about the house, landscaping, or scene. Simply make it look like a real photograph taken by a professional real estate photographer. The result should be indistinguishable from a photo of a real house.`;
 
 
 
