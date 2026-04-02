@@ -846,6 +846,49 @@ let shots=[], shotIdx=0, currentSrc='', lastRaw='';
 let capStream=null, capVideo=null, capReady=false;
 let libOpen=false, libHideTimer=null;
 
+// ── PERSISTENCE (IndexedDB) ───────────────────────────────────
+const _IDB_NAME = 'rendrone', _IDB_VER = 1, _IDB_STORE = 'projects';
+function _idbOpen() {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open(_IDB_NAME, _IDB_VER);
+    r.onupgradeneeded = e => e.target.result.createObjectStore(_IDB_STORE, { keyPath: 'id' });
+    r.onsuccess = e => res(e.target.result);
+    r.onerror = () => rej(r.error);
+  });
+}
+async function persistProject() {
+  if (!PROJECT_ID) return;
+  try {
+    const db = await _idbOpen();
+    const safeQueue = aiQueue.map(({ cardEl, ...rest }) => rest);
+    const tx = db.transaction(_IDB_STORE, 'readwrite');
+    tx.objectStore(_IDB_STORE).put({ id: PROJECT_ID, shots, aiQueue: safeQueue });
+  } catch(e) { console.warn('[persist]', e); }
+}
+async function loadPersistedProject() {
+  if (!PROJECT_ID) return;
+  try {
+    const db = await _idbOpen();
+    const data = await new Promise((res, rej) => {
+      const tx = db.transaction(_IDB_STORE, 'readonly');
+      const r = tx.objectStore(_IDB_STORE).get(PROJECT_ID);
+      r.onsuccess = () => res(r.result);
+      r.onerror = () => rej(r.error);
+    });
+    if (!data) return;
+    if (data.shots && data.shots.length) {
+      shots = data.shots;
+      shotIdx = Math.max(...shots.map(s => s.index));
+      rebuildLib();
+      updateCounts();
+    }
+    if (data.aiQueue && data.aiQueue.length) {
+      aiQueue = data.aiQueue;
+      aiQueue.forEach(item => { if (item.status === 'complete') renderedShotIndices.add(item.shotIdx); });
+    }
+  } catch(e) { console.warn('[persist load]', e); }
+}
+
 const TOOLBAR_H = 56;
 
 // EMBED
@@ -981,6 +1024,7 @@ async function doCapture(){
     shots.push({dataURL:croppedDataURL,time:timeStr,index:shotIdx});
     addCard(croppedDataURL,timeStr,shotIdx);
     updateCounts();
+    persistProject();
 
     if(wasLibOpen) setTimeout(openLibraryBriefly, 100);
 
@@ -1038,12 +1082,12 @@ function addCard(dataURL,time,num){
   openLibraryBriefly();
 }
 
-function delShot(i){shots.splice(i,1);rebuildLib();updateCounts();toast('x','Removed');}
+function delShot(i){shots.splice(i,1);rebuildLib();updateCounts();persistProject();toast('x','Removed');}
 
 function clearAll(){
   if(!shots.length)return;
   if(!confirm(`Clear all ${shots.length} screenshot${shots.length>1?'s':''}?`))return;
-  shots=[];shotIdx=0;rebuildLib();updateCounts();toast('x','Library cleared');
+  shots=[];shotIdx=0;aiQueue=[];renderedShotIndices=new Set();rebuildLib();updateCounts();persistProject();toast('x','Library cleared');
 }
 
 function rebuildLib(){
@@ -1377,6 +1421,7 @@ async function renderQueueItem(item) {
     item.cardEl.classList.add('complete');
     buildQueueCardActions(item, i);
     renderedShotIndices.add(item.shotIdx);
+    persistProject();
 
   } catch(err) {
     item.status = 'failed';
@@ -1488,6 +1533,9 @@ function handleAirLbBg(e) {
     })
     .catch(function(e){ toast('!','Could not load project: '+e.message); });
 })();
+
+// Load persisted screenshots + AI renders for this project link
+loadPersistedProject();
 </script>
 </body>
 </html>
