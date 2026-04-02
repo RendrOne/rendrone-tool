@@ -7,6 +7,11 @@ const path = require('path');
 
 const app = express();
 const RENDER_LIMIT = 15;
+const DEMO_RENDER_LIMIT = 1;
+
+function getRenderLimit(projectId) {
+  return projectId && projectId.toUpperCase().includes('DEMO') ? DEMO_RENDER_LIMIT : RENDER_LIMIT;
+}
 
 const DATA_DIR  = process.env.DATA_DIR || __dirname;
 const DATA_FILE = path.join(DATA_DIR, 'renders.json');
@@ -26,15 +31,15 @@ function getProject(pid) {
   if (!store[pid]) store[pid] = { used: 0, reserved: 0 };
   return store[pid];
 }
-function calcRemaining(rec) {
-  return Math.max(0, RENDER_LIMIT - (rec.used + rec.reserved));
+function calcRemaining(pid, rec) {
+  return Math.max(0, getRenderLimit(pid) - (rec.used + rec.reserved));
 }
 function tryReserve(pid) {
   const rec = getProject(pid);
-  if (calcRemaining(rec) <= 0) return null;
+  if (calcRemaining(pid, rec) <= 0) return null;
   rec.reserved += 1;
   saveStore(store);
-  return calcRemaining(rec);
+  return calcRemaining(pid, rec);
 }
 function commitRender(pid) {
   const rec = getProject(pid);
@@ -69,10 +74,10 @@ app.get('/renders/status', (req, res) => {
   const rec = getProject(project);
   res.json({
     project,
-    remaining: calcRemaining(rec),
+    remaining: calcRemaining(project, rec),
     used:      rec.used,
     reserved:  rec.reserved,
-    total:     RENDER_LIMIT
+    total:     getRenderLimit(project)
   });
 });
 
@@ -153,7 +158,7 @@ app.post('/ai-enhance', async (req, res) => {
     res.json({
       enhanced:  imgPart.inlineData.data,
       mimeType:  imgPart.inlineData.mimeType || 'image/jpeg',
-      remaining: calcRemaining(rec)
+      remaining: calcRemaining(projectId, rec)
     });
 
   } catch (err) {

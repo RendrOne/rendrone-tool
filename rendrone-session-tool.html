@@ -571,7 +571,7 @@
       <span class="air-title">AI Render</span>
     </div>
     <div style="display:flex;align-items:center;gap:.75rem;">
-      <div class="air-limit" id="air-limit-badge"><b id="air-remaining">15</b> / 15 renders remaining</div>
+      <div class="air-limit" id="air-limit-badge"><b id="air-remaining">—</b> / <span id="air-total">—</span> renders remaining</div>
       <button class="btn-air-render" id="btn-air-render" disabled onclick="startRenderQueue()">Render Selected</button>
     </div>
   </div>
@@ -1310,6 +1310,7 @@ let aiSelected = [];
 let aiQueue = [];
 let aiActiveCount = 0;
 let aiRemainingRenders = 15;
+let aiTotalRenders = null;
 let renderedShotIndices = new Set(); // tracks which shots have already been AI rendered
 
 async function openAiRender() {
@@ -1337,12 +1338,14 @@ async function fetchAiStatus() {
     const r = await fetch(`${AI_BACKEND_URL}/renders/status?project=${encodeURIComponent(PROJECT_ID || 'default')}`);
     const data = await r.json();
     aiRemainingRenders = typeof data.remaining === 'number' ? data.remaining : 15;
-  } catch(e) { aiRemainingRenders = 15; }
+    aiTotalRenders = typeof data.total === 'number' ? data.total : 15;
+  } catch(e) { aiRemainingRenders = 15; aiTotalRenders = 15; }
   updateAirLimitBadge();
 }
 
 function updateAirLimitBadge() {
   document.getElementById('air-remaining').textContent = aiRemainingRenders;
+  if (aiTotalRenders !== null) document.getElementById('air-total').textContent = aiTotalRenders;
   const badge = document.getElementById('air-limit-badge');
   const banner = document.getElementById('air-limit-reached');
   badge.className = 'air-limit' + (aiRemainingRenders === 0 ? ' empty' : aiRemainingRenders <= 3 ? ' warn' : '');
