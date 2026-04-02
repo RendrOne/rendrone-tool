@@ -81,7 +81,15 @@ app.get('/renders/status', (req, res) => {
   });
 });
 
-const ENHANCE_PROMPT = `Transform this architectural rendering into a professional real estate photograph. Keep every material, color, texture, and design element exactly as shown — do not change anything about the house, landscaping, or scene. Simply make it look like a real photograph taken by a professional real estate photographer. The result should be indistinguishable from a photo of a real house.`;
+const ENHANCE_PROMPT = `Replicate this image exactly but make it look like a real life photograph. Every material, color, texture, finish, surface, spatial layout, furniture, fixtures, lighting position, and design detail must be identical to the source image. Do not add, remove, or change anything about the scene.
+
+Remove any software UI elements, overlays, watermarks, Twinmotion buttons, navigation icons, or rendering interface artifacts. The final image should contain only the architectural space itself.
+
+Shot on a professional full-frame camera, photographic depth of field, authentic sensor noise, subtle film grain. All surfaces show real-world material behavior: micro-texture, natural light falloff, realistic reflections, and authentic shadow gradients.
+
+Enhance realism with the following: chromatic aberration on lens edges, slight barrel distortion, subtle vignetting toward frame corners, imperceptible focus breathing, real specular highlights with slight bloom on light sources, contact shadows where objects meet surfaces, ambient occlusion in corners and crevices, translucency in thin materials like curtains or foliage, natural color grading with slight warm-to-cool gradient, microscopic dust particles visible in light beams, imperfect parallel lines from handheld camera sway.
+
+No CGI artifacts, no artificial perfection. Indistinguishable from a photograph taken by a professional architectural photographer. Award-winning architectural photography. MLS and editorial quality.`;
 
 
 
