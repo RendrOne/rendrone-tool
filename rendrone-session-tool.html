@@ -212,6 +212,36 @@
 
   * { scrollbar-width:thin; scrollbar-color:#1a1a1a transparent; }
 
+  /* ── DOWNLOAD SELECT MODAL ──────────────────────────────── */
+  .dl-modal-bg { position:fixed; inset:0; background:rgba(0,0,0,.88); z-index:7000; display:none; align-items:center; justify-content:center; backdrop-filter:blur(8px); }
+  .dl-modal-bg.open { display:flex; }
+  .dl-modal { background:#0d0d0d; border:1px solid rgba(255,255,255,.08); border-radius:14px; width:min(680px,94vw); max-height:86vh; display:flex; flex-direction:column; box-shadow:0 32px 80px rgba(0,0,0,.8); overflow:hidden; }
+  .dl-modal-hdr { display:flex; align-items:center; justify-content:space-between; padding:.85rem 1.1rem; border-bottom:1px solid rgba(255,255,255,.06); flex-shrink:0; gap:1rem; }
+  .dl-modal-title { font-family:'Poppins',sans-serif; font-size:.8rem; font-weight:700; color:#fff; }
+  .dl-modal-actions { display:flex; align-items:center; gap:.5rem; }
+  .dl-modal-selall { font-size:.68rem; color:#555; font-family:'DM Sans',sans-serif; background:none; border:none; cursor:pointer; padding:.2rem .4rem; transition:color .15s; }
+  .dl-modal-selall:hover { color:#fff; }
+  .dl-modal-close { width:28px; height:28px; background:rgba(255,255,255,.05); border:none; border-radius:6px; color:#555; cursor:pointer; font-size:.85rem; display:flex; align-items:center; justify-content:center; transition:all .15s; }
+  .dl-modal-close:hover { background:rgba(255,255,255,.1); color:#fff; }
+  .dl-modal-grid { flex:1; overflow-y:auto; padding:1rem; display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:.65rem; align-content:start; }
+  .dl-thumb { position:relative; border-radius:8px; overflow:hidden; border:2px solid #1a1a1a; cursor:pointer; transition:border-color .15s,transform .15s; background:#111; }
+  .dl-thumb:hover { border-color:#555; transform:translateY(-2px); }
+  .dl-thumb.selected { border-color:#fff; }
+  .dl-thumb img { width:100%; aspect-ratio:16/9; object-fit:cover; display:block; }
+  .dl-thumb-check { position:absolute; top:.35rem; right:.35rem; width:20px; height:20px; border-radius:50%; background:rgba(0,0,0,.6); border:1.5px solid #333; display:flex; align-items:center; justify-content:center; font-size:.65rem; color:transparent; transition:all .15s; }
+  .dl-thumb.selected .dl-thumb-check { background:#fff; border-color:#fff; color:#000; }
+  .dl-thumb-lbl { position:absolute; bottom:0; left:0; right:0; padding:.25rem .4rem; background:linear-gradient(transparent,rgba(0,0,0,.75)); font-family:'Poppins',sans-serif; font-size:.55rem; font-weight:700; color:#888; }
+  .dl-modal-ftr { display:flex; align-items:center; justify-content:space-between; padding:.75rem 1.1rem; border-top:1px solid rgba(255,255,255,.06); flex-shrink:0; gap:.75rem; }
+  .dl-modal-count { font-size:.72rem; color:#555; font-family:'DM Sans',sans-serif; }
+  .dl-modal-count b { color:#fff; }
+  .dl-modal-btns { display:flex; gap:.5rem; }
+  .btn-dl-modal { height:34px; padding:0 1rem; border-radius:7px; font-family:'DM Sans',sans-serif; font-size:.72rem; font-weight:600; cursor:pointer; transition:all .15s; border:none; }
+  .btn-dl-modal.primary { background:#fff; color:#000; }
+  .btn-dl-modal.primary:hover { background:#e0e0e0; }
+  .btn-dl-modal.primary:disabled { background:#1a1a1a; color:#333; cursor:not-allowed; }
+  .btn-dl-modal.secondary { background:rgba(255,255,255,.06); color:#888; border:1px solid rgba(255,255,255,.1); }
+  .btn-dl-modal.secondary:hover { background:rgba(255,255,255,.1); color:#fff; }
+
   /* ── AI RENDER OVERLAY ──────────────────────────────────── */
   .ai-overlay { position:fixed; inset:0; background:#050505; z-index:8000; display:none; flex-direction:column; overflow:hidden; }
   .ai-overlay.open { display:flex; }
@@ -562,6 +592,28 @@
   </div>
 </div>
 
+<!-- Download Select Modal -->
+<div class="dl-modal-bg" id="dl-modal-bg" onclick="handleDlModalBg(event)">
+  <div class="dl-modal">
+    <div class="dl-modal-hdr">
+      <span class="dl-modal-title">Select Images to Download</span>
+      <div class="dl-modal-actions">
+        <button class="dl-modal-selall" onclick="dlSelectAll()">Select All</button>
+        <button class="dl-modal-selall" onclick="dlSelectNone()">None</button>
+        <button class="dl-modal-close" onclick="closeDlModal()">&#x2715;</button>
+      </div>
+    </div>
+    <div class="dl-modal-grid" id="dl-modal-grid"></div>
+    <div class="dl-modal-ftr">
+      <span class="dl-modal-count"><b id="dl-sel-count">0</b> selected</span>
+      <div class="dl-modal-btns">
+        <button class="btn-dl-modal secondary" onclick="closeDlModal()">Cancel</button>
+        <button class="btn-dl-modal primary" id="btn-dl-confirm" onclick="confirmDlDownload()" disabled>Download</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- AI Render Lightbox -->
 <div class="air-lb" id="air-lb" onclick="handleAirLbBg(event)">
   <div class="air-lb-box">
@@ -813,18 +865,57 @@ function handleDownload(type) {
   else if(type === 'ai') openAiRender();
 }
 
+let dlSelected = new Set();
+
 function downloadImages() {
-  if(!shots.length) return;
+  if (!shots.length) return;
+  closeDlDropdown();
+  dlSelected = new Set(shots.map((_, i) => i));
+  buildDlModal();
+  document.getElementById('dl-modal-bg').classList.add('open');
+}
+
+function buildDlModal() {
+  const grid = document.getElementById('dl-modal-grid');
+  grid.innerHTML = '';
   shots.forEach((s, i) => {
+    const el = document.createElement('div');
+    el.className = 'dl-thumb' + (dlSelected.has(i) ? ' selected' : '');
+    el.dataset.idx = i;
+    el.innerHTML = `<img src="${s.dataURL}" alt=""><div class="dl-thumb-check">&#10003;</div><div class="dl-thumb-lbl">#${String(s.index).padStart(2,'0')}${s.aiRendered ? ' · AI' : ''}</div>`;
+    el.addEventListener('click', () => {
+      if (dlSelected.has(i)) dlSelected.delete(i); else dlSelected.add(i);
+      el.classList.toggle('selected', dlSelected.has(i));
+      updateDlCount();
+    });
+    grid.appendChild(el);
+  });
+  updateDlCount();
+}
+
+function updateDlCount() {
+  document.getElementById('dl-sel-count').textContent = dlSelected.size;
+  document.getElementById('btn-dl-confirm').disabled = dlSelected.size === 0;
+}
+
+function dlSelectAll() { dlSelected = new Set(shots.map((_, i) => i)); buildDlModal(); }
+function dlSelectNone() { dlSelected = new Set(); buildDlModal(); }
+
+function closeDlModal() { document.getElementById('dl-modal-bg').classList.remove('open'); }
+function handleDlModalBg(e) { if (e.target === document.getElementById('dl-modal-bg')) closeDlModal(); }
+
+function confirmDlDownload() {
+  const indices = [...dlSelected].sort((a, b) => a - b);
+  indices.forEach(i => {
+    const s = shots[i];
     const a = document.createElement('a');
     a.href = s.dataURL;
     const ext = s.dataURL.startsWith('data:image/png') ? 'png' : 'jpg';
     a.download = `RendrOne-Screenshot-${String(s.index).padStart(2,'0')}.${ext}`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
   });
-  toast('ok', `Downloading ${shots.length} image${shots.length > 1 ? 's' : ''}...`);
+  closeDlModal();
+  toast('ok', `Downloading ${indices.length} image${indices.length > 1 ? 's' : ''}...`);
 }
 
 // PRESETS
