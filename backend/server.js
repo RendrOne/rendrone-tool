@@ -76,22 +76,23 @@ app.get('/renders/status', (req, res) => {
   });
 });
 
-const ENHANCE_PROMPT = `Transform this architectural rendering into a photorealistic image that looks like it was taken with a professional camera.
+const ENHANCE_PROMPT = `You are a photorealism filter. Take this architectural rendering and make it look like a real photograph — same scene, same materials, same colors, same everything — just photorealistic.
 
-Make these enhancements dramatically visible:
-- Convert all surfaces from CG/rendered appearance to real photographic texture and depth
-- Enhance material realism: wood grain, concrete texture, stone, glass reflections, metal finishes
-- Add photographic lighting quality: natural shadows, realistic highlights, subtle ambient occlusion
-- Increase overall sharpness and detail to the maximum
-- Remove any Twinmotion UI elements, buttons, or overlays from the image
+WHAT TO DO:
+- Add real photographic texture and depth to every surface (wood, concrete, stone, glass, metal, fabric, plants)
+- Make lighting feel physically real with natural shadows, soft highlights, and realistic reflections
+- Increase sharpness and fine detail across the entire image
+- Remove any Twinmotion or software UI elements, buttons, icons, or overlays that appear on screen
 
-Keep these exactly the same:
-- All colors — do not shift or alter any material or surface colors
-- All lighting fixtures — keep their exact shape, position, and design
-- The composition, camera angle, and framing
-- All architectural elements, landscaping, and objects in their exact positions
+WHAT TO NEVER CHANGE:
+- Colors — every surface color must be identical to the input. No color shifts, no tone changes, no saturation adjustments
+- Materials — do not swap, redesign, or reinterpret any material. Enhance its texture but keep it the same material
+- Lighting fixtures — their shape, design, and position must be exactly preserved
+- Architecture — no changes to any structural elements, geometry, or layout
+- Landscaping, furniture, objects — everything stays exactly where it is
+- Camera angle and composition — do not alter the framing at all
 
-The result should look strikingly more realistic and photographic than the input while being the same scene.`;
+Think of it as: if you printed this render and photographed it with a professional camera, what would it look like. Same scene, photographic quality.`;
 
 
 
@@ -112,7 +113,7 @@ app.post('/ai-enhance', async (req, res) => {
   try {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({
-      model: process.env.IMAGE_MODEL || 'gemini-3.1-flash-image-preview',
+      model: process.env.IMAGE_MODEL || 'gemini-2.5-flash-image',
       generationConfig: { responseModalities: ['image', 'text'] }
     });
 
