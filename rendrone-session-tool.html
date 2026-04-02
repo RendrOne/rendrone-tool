@@ -1300,6 +1300,24 @@ function processAirQueue() {
   }
 }
 
+function compressForAI(dataURL, maxPx, quality) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      let w = img.width, h = img.height;
+      if (w > maxPx || h > maxPx) {
+        if (w >= h) { h = Math.round(h * maxPx / w); w = maxPx; }
+        else        { w = Math.round(w * maxPx / h); h = maxPx; }
+      }
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      resolve(c.toDataURL('image/jpeg', quality));
+    };
+    img.src = dataURL;
+  });
+}
+
 async function renderQueueItem(item) {
   const i = item.cardIdx;
   item.status = 'rendering';
@@ -1313,8 +1331,11 @@ async function renderQueueItem(item) {
   overlayEl.classList.remove('hidden');
 
   const s = shots[item.shotIdx];
-  const base64 = s.dataURL.split(',')[1];
-  const mimeType = s.dataURL.startsWith('data:image/png') ? 'image/png' : 'image/jpeg';
+
+  // Compress to max 1280px before sending — reduces payload 4-8x and speeds up API call
+  const compressed = await compressForAI(s.dataURL, 1280, 0.82);
+  const base64 = compressed.split(',')[1];
+  const mimeType = 'image/jpeg';
 
   try {
     const resp = await fetch(`${AI_BACKEND_URL}/ai-enhance`, {
@@ -1340,6 +1361,13 @@ async function renderQueueItem(item) {
     statusEl.className = 'air-status complete';
     item.cardEl.classList.add('complete');
     buildQueueCardActions(item, i);
+
+    // Auto-save to library
+    const timeStr = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    shotIdx++;
+    shots.push({ dataURL: item.enhancedDataURL, time: timeStr, index: shotIdx, aiRendered: true });
+    addCard(item.enhancedDataURL, timeStr, shotIdx);
+    updateCounts();
 
   } catch(err) {
     item.status = 'failed';
