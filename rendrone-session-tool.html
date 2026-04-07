@@ -993,6 +993,13 @@ function injectContent(raw,label,knownSrc){
     currentSrc=knownSrc||(m?m[1]:'');
   }
   host.innerHTML=html;
+  // Re-create script tags so they actually execute (innerHTML doesn't run scripts)
+  host.querySelectorAll('script').forEach(old=>{
+    const s=document.createElement('script');
+    [...old.attributes].forEach(a=>s.setAttribute(a.name,a.value));
+    if(!old.src) s.textContent=old.textContent;
+    old.replaceWith(s);
+  });
   host.querySelectorAll('div').forEach(d=>{d.style.cssText='position:absolute!important;inset:0!important;width:100%!important;height:100%!important;margin:0!important;padding:0!important;min-height:0!important;min-width:0!important;';});
   host.querySelectorAll('iframe').forEach(f=>{f.removeAttribute('style');f.style.cssText='position:absolute!important;inset:0!important;width:100%!important;height:100%!important;min-height:0!important;min-width:0!important;border:none!important;display:block!important;';});
   host.style.display='block';
