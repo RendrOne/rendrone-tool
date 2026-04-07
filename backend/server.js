@@ -115,25 +115,36 @@ app.post('/ai-enhance', async (req, res) => {
       { timeout: 180000 }
     );
 
-    // Retry up to 2 times on 503 timeout errors
+    // Retry up to 3 attempts — handles 503 timeouts AND cases where the model
+    // responds but returns text instead of an image (common with complex exterior scenes)
     let result, lastErr;
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
-        result = await model.generateContent([
+        const r = await model.generateContent([
           { inlineData: { data: image, mimeType } },
           ENHANCE_PROMPT
         ]);
-        break;
+        const hasImage = r.response?.candidates?.[0]?.content?.parts?.some(p => p.inlineData?.data);
+        if (hasImage) { result = r; break; }
+        // Model responded but gave no image — log what it said and retry
+        const textPart = r.response?.candidates?.[0]?.content?.parts?.find(p => p.text);
+        const modelMsg = textPart?.text?.substring(0, 120) || 'no image in response';
+        console.warn(`[ai-enhance] attempt ${attempt + 1}: no image returned — "${modelMsg}"`);
+        lastErr = new Error(`Model returned no image: ${modelMsg}`);
+        if (attempt < 2) { await new Promise(res => setTimeout(res, 5000)); continue; }
+        throw lastErr;
       } catch(e) {
         lastErr = e;
-        if (attempt < 2 && (e.message?.includes('503') || e.message?.includes('Deadline'))) {
-          await new Promise(r => setTimeout(r, 3000 * (attempt + 1)));
+        const retryable = e.message?.includes('503') || e.message?.includes('Deadline') || e.message?.includes('no image');
+        if (attempt < 2 && retryable) {
+          console.warn(`[ai-enhance] attempt ${attempt + 1} failed (${e.message}), retrying in ${3000*(attempt+1)}ms`);
+          await new Promise(res => setTimeout(res, 3000 * (attempt + 1)));
           continue;
         }
         throw e;
       }
     }
-    if (!result) throw lastErr;
+    if (!result) throw lastErr || new Error('Enhancement failed after 3 attempts');
 
     const candidates = result.response?.candidates;
     if (!candidates?.length) throw new Error('No response from AI model');

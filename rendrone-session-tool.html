@@ -298,6 +298,9 @@
   .air-act-btn { height:24px; padding:0 .6rem; font-family:'DM Sans',sans-serif; font-size:.62rem; font-weight:500; border-radius:5px; border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.05); color:#777; cursor:pointer; transition:all .15s; white-space:nowrap; }
   .air-act-btn:hover { background:rgba(255,255,255,.12); color:#fff; border-color:rgba(255,255,255,.2); }
   .air-act-btn.saved { background:rgba(76,175,80,.1); border-color:rgba(76,175,80,.25); color:#81c784; cursor:default; }
+  .air-act-btn.retry { background:rgba(220,80,50,.12); border-color:rgba(220,80,50,.3); color:#e07060; }
+  .air-act-btn.retry:hover { background:rgba(220,80,50,.22); color:#ff8870; border-color:rgba(220,80,50,.5); }
+  .air-q-err { font-family:'DM Sans',sans-serif; font-size:.58rem; color:#553333; line-height:1.4; padding:.3rem .75rem .4rem; word-break:break-word; }
   .air-limit-reached { padding:.65rem 1.25rem; background:rgba(220,50,50,.08); border-bottom:1px solid rgba(220,50,50,.15); font-size:.72rem; color:#e05555; font-family:'DM Sans',sans-serif; flex-shrink:0; display:none; }
   .air-limit-reached.show { display:block; }
 
@@ -1494,6 +1497,7 @@ function buildQueueCards() {
     grid.appendChild(card);
     item.cardEl = card;
     if (isComplete) buildQueueCardActions(item, i);
+    if (isFailed) addRetryButton(item, i);
   });
 }
 
@@ -1570,10 +1574,19 @@ async function renderQueueItem(item) {
 
   } catch(err) {
     item.status = 'failed';
+    item.lastError = err.message;
     overlayEl.classList.add('hidden');
     statusEl.textContent = 'Failed';
     statusEl.className = 'air-status failed';
     item.cardEl.classList.add('failed');
+    // Show short error hint below the card foot
+    const existing = item.cardEl.querySelector('.air-q-err');
+    if (existing) existing.remove();
+    const errEl = document.createElement('div');
+    errEl.className = 'air-q-err';
+    errEl.textContent = err.message?.includes('limit') ? 'Render limit reached' : 'Tap Try Again to retry';
+    item.cardEl.appendChild(errEl);
+    addRetryButton(item, i);
     console.error('[AI Render]', err.message);
   }
 
@@ -1603,6 +1616,34 @@ function buildQueueCardActions(item, i) {
 
   el.appendChild(view);
   el.appendChild(dl);
+}
+
+function addRetryButton(item, i) {
+  const el = document.getElementById(`airact-${i}`);
+  if (!el) return;
+  el.innerHTML = '';
+  const btn = document.createElement('button');
+  btn.className = 'air-act-btn retry';
+  btn.textContent = 'Try Again';
+  btn.onclick = () => retryRenderItem(item, i);
+  el.appendChild(btn);
+}
+
+function retryRenderItem(item, i) {
+  if (item.status === 'rendering' || item.status === 'queued') return; // already in flight
+  // Reset item — backend already returned the reservation on failure, so quota is free
+  item.status = 'queued';
+  item.enhancedDataURL = null;
+  item.lastError = null;
+  const card = item.cardEl;
+  card.classList.remove('failed');
+  const statusEl = document.getElementById(`airsts-${i}`);
+  if (statusEl) { statusEl.textContent = 'Queued'; statusEl.className = 'air-status queued'; }
+  const actEl = document.getElementById(`airact-${i}`);
+  if (actEl) actEl.innerHTML = '';
+  const errEl = card.querySelector('.air-q-err');
+  if (errEl) errEl.remove();
+  processAirQueue();
 }
 
 function openAirLb(dataURL, title, filename) {
