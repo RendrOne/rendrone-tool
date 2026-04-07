@@ -270,7 +270,8 @@
   .air-sel-card { position:relative; border-radius:8px; overflow:hidden; border:2px solid #1a1a1a; cursor:pointer; transition:border-color .15s,transform .15s; background:#111; }
   .air-sel-card:hover:not(.disabled) { border-color:#555; transform:translateY(-2px); }
   .air-sel-card.selected { border-color:#fff; }
-  .air-sel-card.disabled { opacity:.3; cursor:not-allowed; pointer-events:none; }
+  .air-sel-card.disabled { opacity:.35; cursor:not-allowed; pointer-events:none; }
+  .air-sel-card.rendered-done { opacity:.3; cursor:not-allowed; pointer-events:none; }
   .air-sel-card img { width:100%; aspect-ratio:16/9; object-fit:cover; display:block; }
   .air-sel-check { position:absolute; top:.4rem; right:.4rem; width:22px; height:22px; border-radius:50%; background:rgba(0,0,0,.65); border:1.5px solid #333; display:flex; align-items:center; justify-content:center; font-size:.7rem; color:transparent; transition:all .15s; }
   .air-sel-card.selected .air-sel-check { background:#fff; border-color:#fff; color:#000; }
@@ -298,6 +299,19 @@
   .air-act-btn.saved { background:rgba(76,175,80,.1); border-color:rgba(76,175,80,.25); color:#81c784; cursor:default; }
   .air-limit-reached { padding:.65rem 1.25rem; background:rgba(220,50,50,.08); border-bottom:1px solid rgba(220,50,50,.15); font-size:.72rem; color:#e05555; font-family:'DM Sans',sans-serif; flex-shrink:0; display:none; }
   .air-limit-reached.show { display:block; }
+
+  /* ── RENDER MAX SELECTION POPUP ─────────────────────────── */
+  .air-max-popup-bg { position:fixed; inset:0; background:rgba(0,0,0,.8); z-index:9500; display:none; align-items:center; justify-content:center; backdrop-filter:blur(6px); }
+  .air-max-popup-bg.open { display:flex; }
+  .air-max-popup { background:#111; border:1px solid rgba(255,255,255,.12); border-radius:14px; padding:1.75rem 1.75rem 1.25rem; max-width:340px; width:90%; box-shadow:0 40px 80px rgba(0,0,0,.85); display:flex; flex-direction:column; gap:.9rem; }
+  .air-max-popup-title { font-family:'Poppins',sans-serif; font-size:.95rem; font-weight:700; color:#fff; }
+  .air-max-popup-msg { font-family:'DM Sans',sans-serif; font-size:.78rem; color:#666; line-height:1.65; }
+  .air-max-popup-btns { display:flex; gap:.6rem; justify-content:flex-end; padding-top:.35rem; }
+  .air-max-popup-btn { height:34px; padding:0 1.1rem; border-radius:7px; font-family:'DM Sans',sans-serif; font-size:.75rem; font-weight:600; cursor:pointer; transition:all .15s; }
+  .air-max-popup-btn.secondary { background:rgba(255,255,255,.06); color:#777; border:1px solid rgba(255,255,255,.1); }
+  .air-max-popup-btn.secondary:hover { background:rgba(255,255,255,.12); color:#fff; border-color:rgba(255,255,255,.2); }
+  .air-max-popup-btn.primary { background:#fff; color:#000; border:none; }
+  .air-max-popup-btn.primary:hover { background:#e0e0e0; }
 
   /* ── AI RENDER LIGHTBOX ─────────────────────────────────── */
   .air-lb { position:fixed; inset:0; background:rgba(0,0,0,.93); z-index:9000; display:none; align-items:center; justify-content:center; backdrop-filter:blur(10px); }
@@ -625,6 +639,18 @@
       </div>
     </div>
     <img class="air-lb-img" id="air-lb-img" src="" alt="AI Render">
+  </div>
+</div>
+
+<!-- Render Max Selection Popup -->
+<div class="air-max-popup-bg" id="air-max-popup-bg" onclick="if(event.target===this)closeRenderMaxPopup()">
+  <div class="air-max-popup">
+    <div class="air-max-popup-title">2 images selected</div>
+    <div class="air-max-popup-msg">You can render up to 2 images at a time. Hit Render to start, or Close to adjust your selection.</div>
+    <div class="air-max-popup-btns">
+      <button class="air-max-popup-btn secondary" onclick="closeRenderMaxPopup()">Close</button>
+      <button class="air-max-popup-btn primary" onclick="closeRenderMaxPopup();startRenderQueue()">Render</button>
+    </div>
   </div>
 </div>
 
@@ -1298,7 +1324,7 @@ function toast(icon,msg){
 }
 
 document.addEventListener('keydown',e=>{
-  if(e.key==='Escape'){closePrev();closeShareModal();closeDlDropdown();}
+  if(e.key==='Escape'){closePrev();closeShareModal();closeDlDropdown();closeRenderMaxPopup();}
   if((e.ctrlKey||e.metaKey)&&e.key==='s'){e.preventDefault();captureNow();}
 });
 
@@ -1306,6 +1332,7 @@ window.addEventListener('beforeunload',()=>stopCapture());
 
 // ── AI RENDER ────────────────────────────────────────────────
 const AI_CONCURRENCY = 3;
+const AI_MAX_SELECT = 2;
 let aiSelected = [];
 let aiQueue = [];
 let aiActiveCount = 0;
@@ -1363,8 +1390,9 @@ function buildAirGrid() {
   shots.forEach((s, i) => {
     const alreadyRendered = renderedShotIndices.has(i);
     const card = document.createElement('div');
-    card.className = 'air-sel-card' + (alreadyRendered ? ' disabled' : '');
+    card.className = 'air-sel-card' + (alreadyRendered ? ' rendered-done' : '');
     card.dataset.idx = i;
+    card.dataset.rendered = alreadyRendered ? '1' : '0';
     card.innerHTML = `<img src="${s.dataURL}" alt=""><div class="air-sel-check">&#10003;</div><div class="air-sel-num">${alreadyRendered ? 'AI Rendered' : '#' + String(s.index).padStart(2,'0')}</div>`;
     if (!alreadyRendered) card.addEventListener('click', () => toggleAirSelect(i));
     grid.appendChild(card);
@@ -1374,16 +1402,27 @@ function buildAirGrid() {
 
 function toggleAirSelect(idx) {
   const card = document.querySelector(`.air-sel-card[data-idx="${idx}"]`);
-  if (!card || card.classList.contains('disabled')) return;
+  if (!card || card.classList.contains('disabled') || card.classList.contains('rendered-done')) return;
   if (aiSelected.includes(idx)) {
     aiSelected = aiSelected.filter(i => i !== idx);
     card.classList.remove('selected');
   } else {
-    if (aiSelected.length >= aiRemainingRenders) return;
+    if (aiSelected.length >= AI_MAX_SELECT) {
+      openRenderMaxPopup();
+      return;
+    }
     aiSelected.push(idx);
     card.classList.add('selected');
   }
   updateAirSelUI();
+}
+
+function openRenderMaxPopup() {
+  document.getElementById('air-max-popup-bg').classList.add('open');
+}
+
+function closeRenderMaxPopup() {
+  document.getElementById('air-max-popup-bg').classList.remove('open');
 }
 
 function updateAirSelUI() {
@@ -1391,8 +1430,9 @@ function updateAirSelUI() {
   document.getElementById('air-sel-num').textContent = n;
   document.getElementById('btn-air-render').disabled = n === 0 || aiRemainingRenders === 0;
   document.querySelectorAll('.air-sel-card').forEach(card => {
+    if (card.dataset.rendered === '1') return; // already-rendered cards stay as rendered-done
     const idx = parseInt(card.dataset.idx);
-    card.classList.toggle('disabled', aiRemainingRenders === 0 || (n >= aiRemainingRenders && !aiSelected.includes(idx)));
+    card.classList.toggle('disabled', aiRemainingRenders === 0);
   });
 }
 
