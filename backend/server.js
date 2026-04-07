@@ -126,7 +126,8 @@ app.post('/ai-enhance', async (req, res) => {
         break;
       } catch(e) {
         lastErr = e;
-        if (attempt < 2 && (e.message?.includes('503') || e.message?.includes('Deadline'))) {
+        const isRetryable = e.message?.includes('503') || e.message?.includes('Deadline') || e.message?.includes('429') || e.message?.includes('quota') || e.message?.includes('rate');
+        if (attempt < 2 && isRetryable) {
           await new Promise(r => setTimeout(r, 3000 * (attempt + 1)));
           continue;
         }
