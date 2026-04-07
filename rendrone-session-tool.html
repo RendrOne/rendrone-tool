@@ -271,7 +271,8 @@
   .air-sel-card:hover:not(.disabled) { border-color:#555; transform:translateY(-2px); }
   .air-sel-card.selected { border-color:#fff; }
   .air-sel-card.disabled { opacity:.35; cursor:not-allowed; pointer-events:none; }
-  .air-sel-card.rendered-done { opacity:.3; cursor:not-allowed; pointer-events:none; }
+  .air-sel-card.rendering-now { opacity:.4; cursor:not-allowed; pointer-events:none; }
+  .air-sel-card.rendering-now .air-sel-num { color:#81c784; }
   .air-sel-card img { width:100%; aspect-ratio:16/9; object-fit:cover; display:block; }
   .air-sel-check { position:absolute; top:.4rem; right:.4rem; width:22px; height:22px; border-radius:50%; background:rgba(0,0,0,.65); border:1.5px solid #333; display:flex; align-items:center; justify-content:center; font-size:.7rem; color:transparent; transition:all .15s; }
   .air-sel-card.selected .air-sel-check { background:#fff; border-color:#fff; color:#000; }
@@ -299,6 +300,17 @@
   .air-act-btn.saved { background:rgba(76,175,80,.1); border-color:rgba(76,175,80,.25); color:#81c784; cursor:default; }
   .air-limit-reached { padding:.65rem 1.25rem; background:rgba(220,50,50,.08); border-bottom:1px solid rgba(220,50,50,.15); font-size:.72rem; color:#e05555; font-family:'DM Sans',sans-serif; flex-shrink:0; display:none; }
   .air-limit-reached.show { display:block; }
+
+  /* ── EMBED LOADING OVERLAY ──────────────────────────────── */
+  .embed-loading { position:absolute; inset:0; z-index:20; background:#090909; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1.1rem; transition:opacity .4s; pointer-events:none; }
+  .embed-loading.fade-out { opacity:0; }
+  .embed-loading .embed-spinner { width:34px; height:34px; border:2.5px solid rgba(255,255,255,.1); border-top-color:rgba(255,255,255,.45); border-radius:50%; animation:spin .8s linear infinite; }
+  .embed-loading .embed-load-text { font-family:'DM Sans',sans-serif; font-size:.78rem; color:#3a3a3a; letter-spacing:.02em; }
+
+  /* ── LANDING LOADING STATE (while fetching sheet) ────────── */
+  .land-fetching { display:flex; flex-direction:column; align-items:center; gap:1.1rem; }
+  .land-fetching .lf-spinner { width:28px; height:28px; border:2px solid rgba(255,255,255,.08); border-top-color:rgba(255,255,255,.35); border-radius:50%; animation:spin .8s linear infinite; }
+  .land-fetching .lf-text { font-family:'DM Sans',sans-serif; font-size:.8rem; color:#333; }
 
   /* ── RENDER MAX SELECTION POPUP ─────────────────────────── */
   .air-max-popup-bg { position:fixed; inset:0; background:rgba(0,0,0,.8); z-index:9500; display:none; align-items:center; justify-content:center; backdrop-filter:blur(6px); }
@@ -1021,9 +1033,16 @@ function injectContent(raw,label,knownSrc){
   host.innerHTML=html;
   host.querySelectorAll('div').forEach(d=>{d.style.cssText='position:absolute!important;inset:0!important;width:100%!important;height:100%!important;margin:0!important;padding:0!important;min-height:0!important;min-width:0!important;';});
   host.querySelectorAll('iframe').forEach(f=>{f.removeAttribute('style');f.style.cssText='position:absolute!important;inset:0!important;width:100%!important;height:100%!important;min-height:0!important;min-width:0!important;border:none!important;display:block!important;';});
+  // Show loading overlay on top of iframe while it loads
+  const loadOv=document.createElement('div');
+  loadOv.id='embed-load-ov'; loadOv.className='embed-loading';
+  loadOv.innerHTML='<div class="embed-spinner"></div><span class="embed-load-text">Loading virtual tour…</span>';
+  host.appendChild(loadOv);
+  const ifrEl=host.querySelector('iframe');
+  if(ifrEl){ifrEl.addEventListener('load',()=>{const el=document.getElementById('embed-load-ov');if(el){el.classList.add('fade-out');setTimeout(()=>{const el2=document.getElementById('embed-load-ov');if(el2)el2.remove();},450);}},{once:true});}
   host.style.display='block';
   document.getElementById('landing').style.display='none';
-  toast('ok','Loaded! Explore, then save screenshots.');
+  toast('ok','Virtual tour loading…');
 }
 
 // CAPTURE
@@ -1387,14 +1406,20 @@ function buildAirGrid() {
     grid.innerHTML = '<div class="air-empty">No screenshots saved yet.<br>Go back and save screenshots from the visualization first.</div>';
     return;
   }
+  // Track which shots are currently being processed so we don't double-submit them
+  const activeIndices = new Set(
+    aiQueue.filter(it => it.status === 'queued' || it.status === 'rendering').map(it => it.shotIdx)
+  );
   shots.forEach((s, i) => {
+    const isActive = activeIndices.has(i);
     const alreadyRendered = renderedShotIndices.has(i);
     const card = document.createElement('div');
-    card.className = 'air-sel-card' + (alreadyRendered ? ' rendered-done' : '');
+    card.className = 'air-sel-card' + (isActive ? ' rendering-now' : '');
     card.dataset.idx = i;
-    card.dataset.rendered = alreadyRendered ? '1' : '0';
-    card.innerHTML = `<img src="${s.dataURL}" alt=""><div class="air-sel-check">&#10003;</div><div class="air-sel-num">${alreadyRendered ? 'AI Rendered' : '#' + String(s.index).padStart(2,'0')}</div>`;
-    if (!alreadyRendered) card.addEventListener('click', () => toggleAirSelect(i));
+    card.dataset.active = isActive ? '1' : '0';
+    let label = isActive ? 'Rendering…' : (alreadyRendered ? 'AI Rendered ✓' : '#' + String(s.index).padStart(2,'0'));
+    card.innerHTML = `<img src="${s.dataURL}" alt=""><div class="air-sel-check">&#10003;</div><div class="air-sel-num">${label}</div>`;
+    if (!isActive) card.addEventListener('click', () => toggleAirSelect(i));
     grid.appendChild(card);
   });
   updateAirSelUI();
@@ -1402,7 +1427,7 @@ function buildAirGrid() {
 
 function toggleAirSelect(idx) {
   const card = document.querySelector(`.air-sel-card[data-idx="${idx}"]`);
-  if (!card || card.classList.contains('disabled') || card.classList.contains('rendered-done')) return;
+  if (!card || card.classList.contains('disabled') || card.dataset.active === '1') return;
   if (aiSelected.includes(idx)) {
     aiSelected = aiSelected.filter(i => i !== idx);
     card.classList.remove('selected');
@@ -1430,8 +1455,7 @@ function updateAirSelUI() {
   document.getElementById('air-sel-num').textContent = n;
   document.getElementById('btn-air-render').disabled = n === 0 || aiRemainingRenders === 0;
   document.querySelectorAll('.air-sel-card').forEach(card => {
-    if (card.dataset.rendered === '1') return; // already-rendered cards stay as rendered-done
-    const idx = parseInt(card.dataset.idx);
+    if (card.dataset.active === '1') return; // currently rendering — keep as rendering-now
     card.classList.toggle('disabled', aiRemainingRenders === 0);
   });
 }
@@ -1613,6 +1637,9 @@ function handleAirLbBg(e) {
   var pid = params.get('project');
   if(!pid) return;
 
+  // Show loading state on landing while we fetch the sheet
+  document.getElementById('landing').innerHTML='<div class="land-fetching"><div class="lf-spinner"></div><div class="lf-text">Loading your project…</div></div>';
+
   var SHEET = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQXKOgT0WcQbl8Uj1NCFmGYQoHSCzcCa8zFXdj3SImtIDdV4qmib-6Ddl7n07REg03SrQAt_sunIuIS/pub?gid=0&single=true&output=csv';
 
   function parseCSV(t){
@@ -1641,18 +1668,19 @@ function handleAirLbBg(e) {
       var h = rows[0].map(function(x){ return x.toLowerCase().trim(); });
       var pc = h.indexOf('project_id');
       var ec = h.indexOf('embed_code');
-      if(pc<0||ec<0){ toast('!','Sheet columns not found'); return; }
+      function landErr(msg){ document.getElementById('landing').innerHTML='<div class="land-fetching"><div class="lf-text" style="color:#555;">'+msg+'</div></div>'; toast('!',msg); }
+      if(pc<0||ec<0){ landErr('Sheet column headers not found — expected project_id and embed_code'); return; }
       for(var i=1;i<rows.length;i++){
         if((rows[i][pc]||'').trim().toLowerCase()===pid.toLowerCase()){
           var code=(rows[i][ec]||'').trim();
-          if(!code){ toast('!','Embed code empty for: '+pid); return; }
+          if(!code){ landErr('Embed code is empty for project: '+pid); return; }
           injectContent(code,'','');
           return;
         }
       }
-      toast('!','Project not found: '+pid);
+      landErr('Project not found: '+pid);
     })
-    .catch(function(e){ toast('!','Could not load project: '+e.message); });
+    .catch(function(e){ document.getElementById('landing').innerHTML='<div class="land-fetching"><div class="lf-text" style="color:#555;">Could not load project</div></div>'; toast('!','Could not load project: '+e.message); });
 })();
 
 // Load persisted screenshots + AI renders for this project link
