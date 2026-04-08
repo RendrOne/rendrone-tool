@@ -1485,6 +1485,7 @@ function buildQueueCards() {
     const thumbSrc = (isComplete && item.enhancedDataURL) ? item.enhancedDataURL : s.dataURL;
     const card = document.createElement('div');
     card.className = 'air-q-card' + (isComplete ? ' complete' : isFailed ? ' failed' : '');
+    card.dataset.cardidx = i;
     card.innerHTML = `
       <div class="air-q-thumb">
         <img id="airqi-${i}" src="${thumbSrc}" alt="">
@@ -1579,12 +1580,11 @@ async function renderQueueItem(item) {
     statusEl.textContent = 'Failed';
     statusEl.className = 'air-status failed';
     item.cardEl.classList.add('failed');
-    // Show short error hint below the card foot
-    const existing = item.cardEl.querySelector('.air-q-err');
-    if (existing) existing.remove();
+    // Remove any old error text, then add fresh one
+    item.cardEl.querySelectorAll('.air-q-err').forEach(e => e.remove());
     const errEl = document.createElement('div');
     errEl.className = 'air-q-err';
-    errEl.textContent = err.message?.includes('limit') ? 'Render limit reached' : 'Tap Try Again to retry';
+    errEl.textContent = err.message?.includes('limit') ? 'Render limit reached' : 'Failed — tap Try Again';
     item.cardEl.appendChild(errEl);
     addRetryButton(item, i);
     console.error('[AI Render]', err.message);
@@ -1619,7 +1619,10 @@ function buildQueueCardActions(item, i) {
 }
 
 function addRetryButton(item, i) {
-  const el = document.getElementById(`airact-${i}`);
+  // Use cardEl directly — getElementById can miss if the grid was rebuilt
+  const card = item.cardEl || document.querySelector(`.air-q-card[data-cardidx="${i}"]`);
+  if (!card) return;
+  const el = card.querySelector('.air-q-actions') || document.getElementById(`airact-${i}`);
   if (!el) return;
   el.innerHTML = '';
   const btn = document.createElement('button');
@@ -1630,19 +1633,25 @@ function addRetryButton(item, i) {
 }
 
 function retryRenderItem(item, i) {
-  if (item.status === 'rendering' || item.status === 'queued') return; // already in flight
-  // Reset item — backend already returned the reservation on failure, so quota is free
+  if (item.status === 'rendering' || item.status === 'queued') return;
+  // Backend already returned the reservation on failure — retrying is quota-free
   item.status = 'queued';
   item.enhancedDataURL = null;
   item.lastError = null;
   const card = item.cardEl;
+  if (!card) return;
   card.classList.remove('failed');
-  const statusEl = document.getElementById(`airsts-${i}`);
+  // Reset status label
+  const statusEl = card.querySelector(`#airsts-${i}`) || card.querySelector('.air-status');
   if (statusEl) { statusEl.textContent = 'Queued'; statusEl.className = 'air-status queued'; }
-  const actEl = document.getElementById(`airact-${i}`);
+  // Clear actions + error text
+  const actEl = card.querySelector('.air-q-actions');
   if (actEl) actEl.innerHTML = '';
   const errEl = card.querySelector('.air-q-err');
   if (errEl) errEl.remove();
+  // Make sure overlay is reset
+  const ovEl = card.querySelector('.air-q-ov');
+  if (ovEl) { ovEl.innerHTML = ''; ovEl.classList.add('hidden'); }
   processAirQueue();
 }
 

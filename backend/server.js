@@ -81,17 +81,24 @@ app.get('/renders/status', (req, res) => {
   });
 });
 
-const ENHANCE_PROMPT = `Replicate this image exactly but make it look like a real life photograph. Every material, color, texture, finish, surface, spatial layout, furniture, fixtures, lighting position, and design detail must be identical to the source image. Do not add, remove, or change anything about the scene.
+const ENHANCE_PROMPT = `You are a photorealism filter. Take this architectural rendering and make it look like a real photograph — same scene, same materials, same colors, same everything — just photorealistic.
 
-Remove any software UI elements, overlays, watermarks, Twinmotion buttons, navigation icons, or rendering interface artifacts. The final image should contain only the architectural space itself.
+WHAT TO DO:
+- Add real photographic texture and depth to every surface (wood, concrete, stone, glass, metal, fabric, plants)
+- Make lighting feel physically real with natural shadows, soft highlights, and realistic reflections
+- Increase sharpness and fine detail across the entire image
+- Remove any software UI elements, buttons, icons, or overlays visible in the image
 
-Shot on a professional full-frame camera, photographic depth of field, authentic sensor noise, subtle film grain. All surfaces show real-world material behavior: micro-texture, natural light falloff, realistic reflections, and authentic shadow gradients.
+WHAT TO NEVER CHANGE:
+- Colors — every surface color must be identical to the input
+- Materials — enhance texture but keep the same material
+- Architecture — no changes to structural elements, geometry, or layout
+- Furniture, objects, landscaping — everything stays exactly where it is
+- Camera angle and composition — do not alter the framing at all
 
-Enhance realism with the following: chromatic aberration on lens edges, slight barrel distortion, subtle vignetting toward frame corners, imperceptible focus breathing, real specular highlights with slight bloom on light sources, contact shadows where objects meet surfaces, ambient occlusion in corners and crevices, translucency in thin materials like curtains or foliage, natural color grading with slight warm-to-cool gradient, microscopic dust particles visible in light beams, imperfect parallel lines from handheld camera sway.
+Output only the photorealistic version of the image.`;
 
-No CGI artifacts, no artificial perfection. Indistinguishable from a photograph taken by a professional architectural photographer. Award-winning architectural photography. MLS and editorial quality.`;
-
-
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 app.post('/ai-enhance', async (req, res) => {
   if (!process.env.GEMINI_API_KEY) {
@@ -102,55 +109,67 @@ app.post('/ai-enhance', async (req, res) => {
   if (!image)     return res.status(400).json({ error: '"image" field required' });
   if (!projectId) return res.status(400).json({ error: '"projectId" field required' });
 
-  const remaining = tryReserve(projectId);
-  if (remaining === null) {
+  const reserved = tryReserve(projectId);
+  if (reserved === null) {
     return res.status(429).json({ error: 'Render limit reached for this project', remaining: 0 });
   }
 
   try {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel(
-      { model: process.env.IMAGE_MODEL || 'gemini-3.1-flash-image-preview',
-        generationConfig: { responseModalities: ['image', 'text'] } },
-      { timeout: 180000 }
-    );
 
-    // Retry up to 3 attempts — handles 503 timeouts AND cases where the model
-    // responds but returns text instead of an image (common with complex exterior scenes)
-    let result, lastErr;
-    for (let attempt = 0; attempt < 3; attempt++) {
-      try {
-        const r = await model.generateContent([
+    // Initialise model without options — pass generationConfig per-request for max compatibility
+    const model = genAI.getGenerativeModel({
+      model: process.env.IMAGE_MODEL || 'gemini-3.1-flash-image-preview'
+    });
+
+    const request = {
+      contents: [{
+        role: 'user',
+        parts: [
           { inlineData: { data: image, mimeType } },
-          ENHANCE_PROMPT
-        ]);
-        const hasImage = r.response?.candidates?.[0]?.content?.parts?.some(p => p.inlineData?.data);
-        if (hasImage) { result = r; break; }
-        // Model responded but gave no image — log what it said and retry
-        const textPart = r.response?.candidates?.[0]?.content?.parts?.find(p => p.text);
-        const modelMsg = textPart?.text?.substring(0, 120) || 'no image in response';
-        console.warn(`[ai-enhance] attempt ${attempt + 1}: no image returned — "${modelMsg}"`);
-        lastErr = new Error(`Model returned no image: ${modelMsg}`);
-        if (attempt < 2) { await new Promise(res => setTimeout(res, 5000)); continue; }
-        throw lastErr;
-      } catch(e) {
+          { text: ENHANCE_PROMPT }
+        ]
+      }],
+      generationConfig: { responseModalities: ['image', 'text'] }
+    };
+
+    let imgPart = null;
+    let lastErr  = null;
+
+    // Up to 3 attempts with exponential back-off
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (attempt > 0) {
+        const wait = attempt === 1 ? 4000 : 8000;
+        console.log(`[ai-enhance] attempt ${attempt + 1} in ${wait}ms…`);
+        await sleep(wait);
+      }
+      try {
+        const result = await model.generateContent(request);
+        const parts  = result.response?.candidates?.[0]?.content?.parts ?? [];
+        imgPart = parts.find(p => p.inlineData?.data) ?? null;
+
+        if (imgPart) break; // success
+
+        // Model responded but returned no image — log and retry
+        const txt = parts.find(p => p.text)?.text ?? 'no image in response';
+        console.warn(`[ai-enhance] attempt ${attempt + 1}: no image — "${txt.substring(0, 120)}"`);
+        lastErr = new Error(`No image returned (attempt ${attempt + 1}): ${txt.substring(0, 80)}`);
+
+      } catch (e) {
         lastErr = e;
-        const retryable = e.message?.includes('503') || e.message?.includes('Deadline') || e.message?.includes('no image');
-        if (attempt < 2 && retryable) {
-          console.warn(`[ai-enhance] attempt ${attempt + 1} failed (${e.message}), retrying in ${3000*(attempt+1)}ms`);
-          await new Promise(res => setTimeout(res, 3000 * (attempt + 1)));
-          continue;
-        }
-        throw e;
+        console.warn(`[ai-enhance] attempt ${attempt + 1} error: ${e.message}`);
+        // Always retry unless it's a hard auth / quota / client error
+        const hard = e.message?.includes('API_KEY') ||
+                     e.message?.includes('PERMISSION') ||
+                     e.message?.includes('quota') ||
+                     e.status === 400 || e.status === 401 || e.status === 403;
+        if (hard) break;
       }
     }
-    if (!result) throw lastErr || new Error('Enhancement failed after 3 attempts');
 
-    const candidates = result.response?.candidates;
-    if (!candidates?.length) throw new Error('No response from AI model');
-
-    const imgPart = candidates[0].content.parts.find(p => p.inlineData?.data);
-    if (!imgPart) throw new Error('AI model did not return an image');
+    if (!imgPart) {
+      throw lastErr || new Error('AI model did not return an image after 3 attempts');
+    }
 
     commitRender(projectId);
     const rec = getProject(projectId);
@@ -163,11 +182,11 @@ app.post('/ai-enhance', async (req, res) => {
 
   } catch (err) {
     returnReserved(projectId);
-    console.error('[ai-enhance]', err.message);
+    console.error('[ai-enhance] failed:', err.message);
     res.status(500).json({ error: err.message || 'Enhancement failed' });
   }
 });
 
 const PORT = process.env.PORT || 8080;
 const server = app.listen(PORT, () => console.log(`RendrOne backend running on :${PORT}`));
-server.timeout = 210000; // 3.5 min — longer than the 3-min Gemini timeout
+server.timeout = 210000; // 3.5 min
