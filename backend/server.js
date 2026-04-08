@@ -79,22 +79,28 @@ app.get('/renders/status', (req, res) => {
 });
 
 // ── Prompt ────────────────────────────────────────────────────────────────────
-const ENHANCE_PROMPT = `You are a photorealism filter. Take this architectural rendering and make it look like a real photograph — same scene, same materials, same colors, same everything — just photorealistic.
+const ENHANCE_PROMPT = `You are a photorealism texture filter. Your only job is to make this architectural rendering look like it was photographed with a professional camera. You are NOT allowed to add, remove, or move anything.
 
-WHAT TO DO:
-- Add real photographic texture and depth to every surface (wood, concrete, stone, glass, metal, fabric, plants)
-- Make lighting feel physically real with natural shadows, soft highlights, and realistic reflections
-- Increase sharpness and fine detail across the entire image
-- Remove any software UI elements, buttons, icons, or overlays visible in the image
+STRICT RULES — NEVER BREAK THESE:
+- Every object in the output must exist in exactly the same position as the input. Do not add any new objects, furniture, plants, people, decor, or anything else.
+- Do not remove anything from the scene. Every element present in the input must appear in the output.
+- Do not change any colors. Every surface, wall, floor, ceiling, material, and object must be the exact same color as in the input image.
+- Do not change any materials. A wood floor stays wood, concrete stays concrete, tile stays tile. Only add photographic texture — do not swap or reinterpret materials.
+- Do not change the architecture. Walls, windows, doors, ceilings, and structural elements must be identical in shape and position.
+- Do not change the lighting setup. Light sources must remain in the same positions. You may add subtle natural shadows and reflections from existing lights only.
+- Do not change the camera angle, crop, or composition in any way.
+- Do not add sky, landscape, or background content that was not in the original.
+- Remove any visible software UI, watermarks, or rendering interface overlays.
 
-WHAT TO NEVER CHANGE:
-- Colors — every surface color must be identical to the input
-- Materials — enhance texture but keep the same material
-- Architecture — no changes to structural elements, geometry, or layout
-- Furniture, objects, landscaping — everything stays exactly where it is
-- Camera angle and composition — do not alter the framing at all
+WHAT YOU ARE ALLOWED TO DO:
+- Add photographic surface texture and micro-detail to existing materials (grain in wood, roughness in concrete, weave in fabric)
+- Add subtle photographic imperfections: lens vignette, mild chromatic aberration, realistic sensor noise, slight depth-of-field blur
+- Add realistic shadows and reflections that are physically consistent with the existing light sources in the scene
+- Increase overall sharpness and definition
 
-Output only the photorealistic version of the image.`;
+Think of this as: take the render, print it, photograph it with a professional architectural camera. Same exact scene — just real-looking.
+
+Output only the enhanced image. Do not describe or explain anything.`;
 
 // ── AI enhance endpoint ────────────────────────────────────────────────────────
 app.post('/ai-enhance', async (req, res) => {
