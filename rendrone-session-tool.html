@@ -300,7 +300,7 @@
   .air-act-btn.saved { background:rgba(76,175,80,.1); border-color:rgba(76,175,80,.25); color:#81c784; cursor:default; }
   .air-act-btn.retry { background:rgba(220,80,50,.12); border-color:rgba(220,80,50,.3); color:#e07060; }
   .air-act-btn.retry:hover { background:rgba(220,80,50,.22); color:#ff8870; border-color:rgba(220,80,50,.5); }
-  .air-q-err { font-family:'DM Sans',sans-serif; font-size:.58rem; color:#553333; line-height:1.4; padding:.3rem .75rem .4rem; word-break:break-word; }
+  .air-q-err { font-family:'DM Sans',sans-serif; font-size:.58rem; color:#c0645a; line-height:1.4; padding:.3rem .75rem .5rem; word-break:break-word; max-width:100%; }
   .air-limit-reached { padding:.65rem 1.25rem; background:rgba(220,50,50,.08); border-bottom:1px solid rgba(220,50,50,.15); font-size:.72rem; color:#e05555; font-family:'DM Sans',sans-serif; flex-shrink:0; display:none; }
   .air-limit-reached.show { display:block; }
 
@@ -1580,13 +1580,14 @@ async function renderQueueItem(item) {
     statusEl.textContent = 'Failed';
     statusEl.className = 'air-status failed';
     item.cardEl.classList.add('failed');
-    // Remove any old error text, then add fresh one
+    // Show real error so it's diagnosable + a retry button
     item.cardEl.querySelectorAll('.air-q-err').forEach(e => e.remove());
     const errEl = document.createElement('div');
     errEl.className = 'air-q-err';
-    errEl.textContent = err.message?.includes('limit') ? 'Render limit reached' : 'Failed — tap Try Again';
+    const isLimit = err.message?.toLowerCase().includes('limit');
+    errEl.textContent = isLimit ? 'Render limit reached' : (err.message || 'Unknown error');
     item.cardEl.appendChild(errEl);
-    addRetryButton(item, i);
+    if (!isLimit) addRetryButton(item, i);
     console.error('[AI Render]', err.message);
   }
 
